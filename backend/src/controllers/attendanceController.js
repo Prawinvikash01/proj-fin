@@ -179,3 +179,56 @@ exports.getAttendance = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getRecentActivity = async (req, res, next) => {
+  try {
+    const AuditLog = require('../models/AuditLog');
+    
+    // Get employee's recent activities from logs (last 10 days)
+    const tenDaysAgo = new Date();
+    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+    
+    const activities = await AuditLog.find({
+      user: req.user.id,
+      createdAt: { $gte: tenDaysAgo }
+    })
+      .populate('user', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(10);
+    
+    // Format activities for display
+    const formattedActivities = activities.map((log) => {
+      // Create human-readable descriptions
+      let description = '';
+      const methodUrl = log.details?.url || '';
+      const method = log.details?.method || '';
+      
+      if (method === 'POST' && methodUrl.includes('attachment')) {
+        description = 'Uploaded a document';
+      } else if (method === 'POST' && methodUrl.includes('leave')) {
+        description = 'Submitted leave request';
+      } else if (method === 'POST' && methodUrl.includes('check-in')) {
+        description = 'Checked in';
+      } else if (method === 'POST' && methodUrl.includes('check-out')) {
+        description = 'Checked out';
+      } else if (method === 'PUT' && methodUrl.includes('profile')) {
+        description = 'Updated profile';
+      } else if (method === 'PUT' && methodUrl.includes('task')) {
+        description = 'Completed a task';
+      } else {
+        description = log.action || 'System activity';
+      }
+      
+      return {
+        id: log._id,
+        description,
+        timestamp: log.createdAt,
+        action: log.action
+      };
+    });
+    
+    res.json(formattedActivities);
+  } catch (err) {
+    next(err);
+  }
+};

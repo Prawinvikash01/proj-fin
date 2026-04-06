@@ -14,6 +14,8 @@ const leaveRoutes = require('./routes/leaveRoutes');
 app.use('/api/leaves', leaveRoutes);
 const attendanceRoutes = require('./routes/attendanceRoutes');
 app.use('/api/attendance', attendanceRoutes);
+const taskRoutes = require('./routes/taskRoutes');
+app.use('/api/tasks', taskRoutes);
 const payrollRoutes = require('./routes/payrollRoutes');
 app.use('/api/payrolls', payrollRoutes);
 const documentRoutes = require('./routes/documentRoutes');

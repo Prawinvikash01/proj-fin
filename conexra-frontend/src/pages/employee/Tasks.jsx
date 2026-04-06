@@ -12,8 +12,10 @@ import {
   FaUser,
   FaInfoCircle
 } from "react-icons/fa";
+import * as taskService from "../../services/taskService";
 
 function MyTasks() {
+  const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -27,96 +29,21 @@ function MyTasks() {
     overdue: 0
   });
 
-  // Load mock tasks
   useEffect(() => {
-    const mockTasks = [
-      // {
-      //   id: 1,
-      //   title: "Update employee handbooks",
-      //   description: "Review and update HR policies for 2026",
-      //   assignedBy: "Admin User",
-      //   priority: "high",
-      //   status: "in-progress",
-      //   dueDate: "2026-03-15",
-      //   createdDate: "2026-03-01",
-      //   completedDate: null,
-      //   category: "Documentation"
-      // },
-      // {
-      //   id: 2,
-      //   title: "Complete quarterly timesheet",
-      //   description: "Submit Q1 timesheet for approval",
-      //   assignedBy: "Admin User",
-      //   priority: "high",
-      //   status: "pending",
-      //   dueDate: "2026-03-10",
-      //   createdDate: "2026-03-05",
-      //   completedDate: null,
-      //   category: "Administrative"
-      // },
-      // {
-      //   id: 3,
-      //   title: "Review project documentation",
-      //   description: "Go through the new project specs and provide feedback",
-      //   assignedBy: "Admin User",
-      //   priority: "medium",
-      //   status: "pending",
-      //   dueDate: "2026-03-18",
-      //   createdDate: "2026-03-02",
-      //   completedDate: null,
-      //   category: "Documentation"
-      // },
-      // {
-      //   id: 4,
-      //   title: "Attend team meeting",
-      //   description: "Weekly sync with engineering team",
-      //   assignedBy: "Admin User",
-      //   priority: "medium",
-      //   status: "completed",
-      //   dueDate: "2026-03-08",
-      //   createdDate: "2026-03-01",
-      //   completedDate: "2026-03-08",
-      //   category: "Meetings"
-      // },
-      // {
-      //   id: 5,
-      //   title: "Submit expense report",
-      //   description: "Submit February expense report",
-      //   assignedBy: "Admin User",
-      //   priority: "low",
-      //   status: "pending",
-      //   dueDate: "2026-03-05",
-      //   createdDate: "2026-03-01",
-      //   completedDate: null,
-      //   category: "Administrative"
-      // },
-      // {
-      //   id: 6,
-      //   title: "Complete training module",
-      //   description: "Finish the security awareness training",
-      //   assignedBy: "Admin User",
-      //   priority: "critical",
-      //   status: "pending",
-      //   dueDate: "2026-03-09",
-      //   createdDate: "2026-03-03",
-      //   completedDate: null,
-      //   category: "Training"
-      // },
-      // {
-      //   id: 7,
-      //   title: "Update personal profile",
-      //   description: "Add recent certifications to profile",
-      //   assignedBy: "Admin User",
-      //   priority: "low",
-      //   status: "in-progress",
-      //   dueDate: "2026-03-20",
-      //   createdDate: "2026-03-04",
-      //   completedDate: null,
-      //   category: "Profile"
-      // },
-    ];
+    const loadTasks = async () => {
+      try {
+        setLoading(true);
+        const response = await taskService.getAllTasks();
+        const tasksData = Array.isArray(response) ? response : response.data || [];
+        setTasks(tasksData);
+      } catch (err) {
+        console.error("Error loading tasks:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    setTasks(mockTasks);
+    loadTasks();
   }, []);
 
   // Apply filters and search
@@ -136,9 +63,9 @@ function MyTasks() {
     // Search
     if (searchTerm) {
       filtered = filtered.filter(task => 
-        task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.category.toLowerCase().includes(searchTerm.toLowerCase())
+        task.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (task.description || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (task.category || "").toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -155,16 +82,21 @@ function MyTasks() {
     setStats({ total, pending, inProgress, completed, overdue });
   }, [tasks, statusFilter, priorityFilter, searchTerm]);
 
-  const handleStatusChange = (taskId, newStatus) => {
-    setTasks(tasks.map(task => 
-      task.id === taskId 
-        ? { 
-            ...task, 
-            status: newStatus,
-            completedDate: newStatus === "completed" ? new Date().toISOString().split('T')[0] : null 
-          }
-        : task
-    ));
+  const handleStatusChange = async (taskId, newStatus) => {
+    try {
+      await taskService.updateTaskStatus(taskId, newStatus);
+      setTasks(tasks.map(task => 
+        (task._id || task.id) === taskId 
+          ? { 
+              ...task, 
+              status: newStatus,
+              completedDate: newStatus === "completed" ? new Date().toISOString().split('T')[0] : null 
+            }
+          : task
+      ));
+    } catch (err) {
+      console.error("Error updating task status:", err);
+    }
   };
 
   const getPriorityDetails = (priority) => {
@@ -342,7 +274,7 @@ function MyTasks() {
             
             return (
               <div 
-                key={task.id} 
+                key={task._id || task.id} 
                 style={{
                   ...styles.taskCard,
                   borderLeft: `5px solid ${priority.border}`,
@@ -357,7 +289,7 @@ function MyTasks() {
                   <div style={styles.taskStatus}>
                     <select
                       value={task.status}
-                      onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                      onChange={(e) => handleStatusChange(task._id || task.id, e.target.value)}
                       style={{
                         ...styles.statusSelect,
                         backgroundColor: statusOptions.find(s => s.value === task.status)?.bg || '#f1f5f9',
@@ -378,7 +310,7 @@ function MyTasks() {
                 <div style={styles.taskDetails}>
                   <div style={styles.taskDetailItem}>
                     <FaUser style={styles.detailIcon} />
-                    <span>Assigned by: {task.assignedBy}</span>
+                    <span>Assigned by: {task.assignedBy?.name || task.assignedBy || 'Admin'}</span>
                   </div>
                   <div style={styles.taskDetailItem}>
                     <FaCalendarAlt style={styles.detailIcon} />

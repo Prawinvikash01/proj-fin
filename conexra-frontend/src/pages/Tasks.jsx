@@ -14,8 +14,11 @@ import {
   FaCalendarAlt,
   FaFlag,
   FaSave,
-  FaTimes
+  FaTimes,
+  FaSpinner
 } from "react-icons/fa";
+import * as taskService from "../services/taskService";
+import * as employeeService from "../services/employeeService";
 
 function Tasks() {
   const [tasks, setTasks] = useState([]);
@@ -25,6 +28,10 @@ function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -36,27 +43,41 @@ function Tasks() {
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
-    assignedTo: "",
-    department: "",
+    employee: "",
     priority: "medium",
     status: "pending",
-    dueDate: "",
-    createdDate: new Date().toISOString().split('T')[0]
+    dueDate: ""
   });
 
-  // Mock employees data
-  const [employees] = useState([
-    { id: 1, name: "John Doe", department: "Engineering" },
-    { id: 2, name: "Jane Smith", department: "Marketing" },
-    { id: 3, name: "Mike Johnson", department: "HR" },
-    { id: 4, name: "Sarah Wilson", department: "Sales" },
-    { id: 5, name: "Tom Brown", department: "Engineering" },
-    { id: 6, name: "Emily Davis", department: "Marketing" },
-  ]);
-
-  // Load mock tasks
+  // Load employees and tasks from backend
   useEffect(() => {
-    const mockTasks = [
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch employees
+        const empResponse = await employeeService.getEmployees();
+        const empList = empResponse.data || empResponse || [];
+        setEmployees(empList);
+
+        // Fetch tasks and stats
+        const tasksResponse = await taskService.getAllTasksAdmin();
+        const tasksData = Array.isArray(tasksResponse) ? tasksResponse : tasksResponse.data || [];
+        setTasks(tasksData);
+
+        const statsResponse = await taskService.getTaskStatsAdmin();
+        setStats(statsResponse.data || statsResponse);
+      } catch (err) {
+        console.error("Error loading data:", err);
+        setError("Failed to load tasks. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
       // {
       //   id: 1,
       //   title: "Update employee handbooks",
@@ -147,12 +168,6 @@ function Tasks() {
       //   dueDate: "2026-03-12",
       //   createdDate: "2026-03-07",
       //   completedDate: null
-      // },
-    ];
-
-    setTasks(mockTasks);
-  }, []);
-
   // Apply filters and calculate stats
   useEffect(() => {
     let filtered = [...tasks];
@@ -166,49 +181,58 @@ function Tasks() {
     }
 
     if (searchTerm) {
-      filtered = filtered.filter(task => 
-        task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.assignedTo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.department.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(task => {
+        const employeeName = task.employee?.user?.name || task.employee?.name || "";
+        return (
+          task.title.toLowerCase().includes(searchLower) ||
+          task.description?.toLowerCase().includes(searchLower) ||
+          employeeName.toLowerCase().includes(searchLower)
+        );
+      });
     }
 
     setFilteredTasks(filtered);
-
-    // Calculate stats
-    const today = new Date().toISOString().split('T')[0];
-    const total = tasks.length;
-    const pending = tasks.filter(t => t.status === "pending").length;
-    const inProgress = tasks.filter(t => t.status === "in-progress").length;
-    const completed = tasks.filter(t => t.status === "completed").length;
-    const overdue = tasks.filter(t => t.status !== "completed" && t.dueDate < today).length;
-
-    setStats({ total, pending, inProgress, completed, overdue });
   }, [tasks, statusFilter, priorityFilter, searchTerm]);
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     // Validate form
-    if (!newTask.title || !newTask.assignedTo || !newTask.dueDate) {
-      alert("Please fill all required fields");
+    if (!newTask.title || !newTask.employee || !newTask.dueDate) {
+      setError("Please fill all required fields (Title, Employee, Due Date)");
       return;
     }
 
-    // Find employee details
-    const employee = employees.find(e => e.name === newTask.assignedTo);
+    try {
+      setSubmitting(true);
+      setError(null);
 
-    const task = {
-      id: tasks.length + 1,
-      ...newTask,
-      assignedToId: employee?.id,
-      createdDate: new Date().toISOString().split('T')[0],
-      completedDate: null
-    };
+      const taskData = {
+        title: newTask.title,
+        description: newTask.description,
+        employeeId: newTask.employee,
+        priority: newTask.priority,
+        status: newTask.status,
+        dueDate: newTask.dueDate
+      };
 
-    setTasks([task, ...tasks]);
-    resetForm();
-    setShowForm(false);
-    alert("Task created successfully!");
+      const response = await taskService.createTask(taskData);
+      
+      // Refresh tasks and stats
+      const tasksResponse = await taskService.getAllTasksAdmin();
+      const tasksData = Array.isArray(tasksResponse) ? tasksResponse : tasksResponse.data || [];
+      setTasks(tasksData);
+
+      const statsResponse = await taskService.getTaskStatsAdmin();
+      setStats(statsResponse.data || statsResponse);
+
+      resetForm();
+      setShowForm(false);
+    } catch (err) {
+      console.error("Error creating task:", err);
+      setError(err.response?.data?.message || "Failed to create task");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleEditTask = (task) => {
@@ -216,8 +240,7 @@ function Tasks() {
     setNewTask({
       title: task.title,
       description: task.description || "",
-      assignedTo: task.assignedTo,
-      department: task.department,
+      employee: task.employee._id || task.employee,
       priority: task.priority,
       status: task.status,
       dueDate: task.dueDate
@@ -225,58 +248,92 @@ function Tasks() {
     setShowForm(true);
   };
 
-  const handleUpdateTask = () => {
-    if (!newTask.title || !newTask.assignedTo || !newTask.dueDate) {
-      alert("Please fill all required fields");
+  const handleUpdateTask = async () => {
+    if (!newTask.title || !newTask.employee || !newTask.dueDate) {
+      setError("Please fill all required fields (Title, Employee, Due Date)");
       return;
     }
 
-    const updatedTasks = tasks.map(task => 
-      task.id === editingTask.id 
-        ? { 
-            ...task, 
-            ...newTask,
-            completedDate: newTask.status === "completed" ? new Date().toISOString().split('T')[0] : null 
-          }
-        : task
-    );
+    try {
+      setSubmitting(true);
+      setError(null);
 
-    setTasks(updatedTasks);
-    resetForm();
-    setShowForm(false);
-    setEditingTask(null);
-    alert("Task updated successfully!");
-  };
+      const taskData = {
+        title: newTask.title,
+        description: newTask.description,
+        employeeId: newTask.employee,
+        priority: newTask.priority,
+        status: newTask.status,
+        dueDate: newTask.dueDate
+      };
 
-  const handleDeleteTask = (id) => {
-    if (window.confirm("Are you sure you want to delete this task?")) {
-      setTasks(tasks.filter(task => task.id !== id));
-      alert("Task deleted successfully!");
+      await taskService.updateTask(editingTask._id, taskData);
+
+      // Refresh tasks and stats
+      const tasksResponse = await taskService.getAllTasksAdmin();
+      const tasksData = Array.isArray(tasksResponse) ? tasksResponse : tasksResponse.data || [];
+      setTasks(tasksData);
+
+      const statsResponse = await taskService.getTaskStatsAdmin();
+      setStats(statsResponse.data || statsResponse);
+
+      resetForm();
+      setShowForm(false);
+      setEditingTask(null);
+    } catch (err) {
+      console.error("Error updating task:", err);
+      setError(err.response?.data?.message || "Failed to update task");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleStatusChange = (id, newStatus) => {
-    setTasks(tasks.map(task => 
-      task.id === id 
-        ? { 
-            ...task, 
-            status: newStatus,
-            completedDate: newStatus === "completed" ? new Date().toISOString().split('T')[0] : null 
-          }
-        : task
-    ));
+  const handleDeleteTask = async (id) => {
+    if (window.confirm("Are you sure you want to delete this task?")) {
+      try {
+        setError(null);
+        await taskService.deleteTask(id);
+
+        // Refresh tasks and stats
+        const tasksResponse = await taskService.getAllTasksAdmin();
+        const tasksData = Array.isArray(tasksResponse) ? tasksResponse : tasksResponse.data || [];
+        setTasks(tasksData);
+
+        const statsResponse = await taskService.getTaskStatsAdmin();
+        setStats(statsResponse.data || statsResponse);
+      } catch (err) {
+        console.error("Error deleting task:", err);
+        setError(err.response?.data?.message || "Failed to delete task");
+      }
+    }
+  };
+
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      setError(null);
+      await taskService.updateTaskStatus(id, newStatus);
+
+      // Refresh tasks and stats
+      const tasksResponse = await taskService.getAllTasksAdmin();
+      const tasksData = Array.isArray(tasksResponse) ? tasksResponse : tasksResponse.data || [];
+      setTasks(tasksData);
+
+      const statsResponse = await taskService.getTaskStatsAdmin();
+      setStats(statsResponse.data || statsResponse);
+    } catch (err) {
+      console.error("Error updating status:", err);
+      setError("Failed to update task status");
+    }
   };
 
   const resetForm = () => {
     setNewTask({
       title: "",
       description: "",
-      assignedTo: "",
-      department: "",
+      employee: "",
       priority: "medium",
       status: "pending",
-      dueDate: "",
-      createdDate: new Date().toISOString().split('T')[0]
+      dueDate: ""
     });
   };
 
@@ -461,20 +518,15 @@ function Tasks() {
                 <label style={formLabel}>Assign To *</label>
                 <div style={selectWrapper}>
                   <select
-                    value={newTask.assignedTo}
-                    onChange={(e) => {
-                      const employee = employees.find(emp => emp.name === e.target.value);
-                      setNewTask({
-                        ...newTask, 
-                        assignedTo: e.target.value,
-                        department: employee?.department || ""
-                      });
-                    }}
+                    value={newTask.employee}
+                    onChange={(e) => setNewTask({ ...newTask, employee: e.target.value })}
                     style={formSelect}
                   >
                     <option value="">Select Employee</option>
                     {employees.map(emp => (
-                      <option key={emp.id} value={emp.name}>{emp.name} - {emp.department}</option>
+                      <option key={emp._id || emp.id} value={emp._id || emp.id}>
+                        {emp.user?.name || emp.name} {emp.department ? `- ${emp.department}` : ''}
+                      </option>
                     ))}
                   </select>
                   <FaChevronDown style={selectIcon} />
@@ -565,12 +617,13 @@ function Tasks() {
           </thead>
           <tbody>
             {filteredTasks.map(task => {
+              const taskId = task._id || task.id;
               const priority = getPriorityDetails(task.priority);
               const status = getStatusDetails(task.status);
               const overdue = isOverdue(task.dueDate, task.status);
               
               return (
-                <tr key={task.id} style={overdue ? overdueRow : {}}>
+                <tr key={taskId} style={overdue ? overdueRow : {}}>
                   <td style={td}>
                     <div style={taskCell}>
                       <div style={taskTitle}>{task.title}</div>
@@ -580,10 +633,10 @@ function Tasks() {
                   <td style={td}>
                     <div style={assigneeCell}>
                       <FaUser style={assigneeIcon} />
-                      {task.assignedTo}
+                      {task.employee?.user?.name || task.employee?.name || 'Unassigned'}
                     </div>
                   </td>
-                  <td style={td}>{task.department}</td>
+                  <td style={td}>{task.employee?.department || task.department || '-'}</td>
                   <td style={td}>
                     <span style={{
                       ...priorityBadge,
@@ -597,7 +650,7 @@ function Tasks() {
                     <div style={statusCell}>
                       <select
                         value={task.status}
-                        onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                        onChange={(e) => handleStatusChange(taskId, e.target.value)}
                         style={{
                           ...statusSelect,
                           backgroundColor: status.bg,
@@ -622,7 +675,7 @@ function Tasks() {
                       {overdue && <span style={overdueBadge}>Overdue</span>}
                     </div>
                   </td>
-                  <td style={td}>{new Date(task.createdDate).toLocaleDateString()}</td>
+                  <td style={td}>{new Date(task.createdAt).toLocaleDateString()}</td>
                   <td style={td}>
                     <div style={actionGroup}>
                       <button 
@@ -633,7 +686,7 @@ function Tasks() {
                         <FaEdit />
                       </button>
                       <button 
-                        onClick={() => handleDeleteTask(task.id)}
+                        onClick={() => handleDeleteTask(taskId)}
                         style={{...actionButton, color: "#ef4444", background: "#fee2e2"}}
                         title="Delete"
                       >

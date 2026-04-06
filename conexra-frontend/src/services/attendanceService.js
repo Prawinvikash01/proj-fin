@@ -18,6 +18,12 @@ export const getDashboardStats = async () => {
   return response.data;
 };
 
+export const getRecentActivity = async () => {
+  const response = await api.get('/attendance/activity/recent');
+  console.log('Recent activity:', response.data);
+  return response.data;
+};
+
 export const checkIn = async () => {
   const response = await api.post('/attendance/check-in');
   console.log('Check-in response:', response.data);

@@ -11,8 +11,9 @@ import {
   FaUserCheck,
   FaUserTimes
 } from "react-icons/fa";
-import { checkIn, checkOut, getTodayStatus, getDashboardStats } from "../../services/attendanceService";
+import { checkIn, checkOut, getTodayStatus, getDashboardStats, getRecentActivity } from "../../services/attendanceService";
 import { getLeaveBalance } from "../../services/leaveService";
+import { getPendingTasks, getTaskStats } from "../../services/taskService";
 
 function EmployeeDashboard() {
   const navigate = useNavigate();
@@ -33,6 +34,8 @@ function EmployeeDashboard() {
     used: 0,
     pending: 0
   });
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [pendingTasks, setPendingTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -50,13 +53,15 @@ function EmployeeDashboard() {
     setError(null);
 
     // Fetch dashboard stats and today's attendance status
-    Promise.all([getDashboardStats(), getTodayStatus(), getLeaveBalance()])
-      .then(([dashStats, todayStatus, leaveBalance]) => {
+    Promise.all([getDashboardStats(), getTodayStatus(), getLeaveBalance(), getRecentActivity(), getPendingTasks(), getTaskStats()])
+      .then(([dashStats, todayStatus, leaveBalance, activity, tasks, taskStats]) => {
         setStats(prev => ({
           ...prev,
           presentDays: dashStats.presentDays || 0,
           absentDays: dashStats.absentDays || 0,
-          leaveBalance: (leaveBalance.sick + leaveBalance.vacation + leaveBalance.personal) - (leaveBalance.used + leaveBalance.pending) || 0
+          leaveBalance: (leaveBalance.sick + leaveBalance.vacation + leaveBalance.personal) - (leaveBalance.used + leaveBalance.pending) || 0,
+          pendingTasks: taskStats.pendingTasks || 0,
+          completedTasks: taskStats.completedTasks || 0
         }));
         
         setLeaveDetails({
@@ -66,6 +71,9 @@ function EmployeeDashboard() {
           used: leaveBalance.used || 0,
           pending: leaveBalance.pending || 0
         });
+        
+        setRecentActivity(activity || []);
+        setPendingTasks(tasks || []);
         
         if (todayStatus) {
           setAttendanceStatus(todayStatus.status || 'checked-out');
@@ -618,27 +626,29 @@ function EmployeeDashboard() {
           <div style={styles.activityCard}>
             <h2 style={styles.cardTitle}>Recent Activity</h2>
             <div style={styles.activityList}>
-              <div style={styles.activityItem}>
-                <div style={styles.activityDot}></div>
-                <div style={styles.activityContent}>
-                  <p style={styles.activityText}>Checked in at 09:00 AM</p>
-                  <span style={styles.activityTime}>Today</span>
-                </div>
-              </div>
-              <div style={styles.activityItem}>
-                <div style={styles.activityDot}></div>
-                <div style={styles.activityContent}>
-                  <p style={styles.activityText}>Submitted leave request</p>
-                  <span style={styles.activityTime}>Yesterday</span>
-                </div>
-              </div>
-              <div style={styles.activityItem}>
-                <div style={styles.activityDot}></div>
-                <div style={styles.activityContent}>
-                  <p style={styles.activityText}>Completed task: Update profile</p>
-                  <span style={styles.activityTime}>2 days ago</span>
-                </div>
-              </div>
+              {recentActivity.length > 0 ? (
+                recentActivity.map((activity) => {
+                  const timeDiff = Math.floor((new Date() - new Date(activity.timestamp)) / 1000);
+                  let timeLabel = '';
+                  
+                  if (timeDiff < 60) timeLabel = 'Just now';
+                  else if (timeDiff < 3600) timeLabel = `${Math.floor(timeDiff / 60)}m ago`;
+                  else if (timeDiff < 86400) timeLabel = `${Math.floor(timeDiff / 3600)}h ago`;
+                  else timeLabel = `${Math.floor(timeDiff / 86400)}d ago`;
+                  
+                  return (
+                    <div key={activity.id} style={styles.activityItem}>
+                      <div style={styles.activityDot}></div>
+                      <div style={styles.activityContent}>
+                        <p style={styles.activityText}>{activity.description}</p>
+                        <span style={styles.activityTime}>{timeLabel}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p style={styles.activityText}>No recent activity</p>
+              )}
             </div>
             <button style={styles.viewAllButton}>View All Activity</button>
           </div>
@@ -647,27 +657,38 @@ function EmployeeDashboard() {
           <div style={styles.tasksCard}>
             <h2 style={styles.cardTitle}>Pending Tasks</h2>
             <div style={styles.tasksList}>
-              <div style={styles.taskItem}>
-                <input type="checkbox" style={styles.taskCheckbox} />
-                <div style={styles.taskContent}>
-                  <p style={styles.taskTitle}>Update employee handbook</p>
-                  <span style={styles.taskDue}>Due: Mar 15, 2026</span>
-                </div>
-              </div>
-              <div style={styles.taskItem}>
-                <input type="checkbox" style={styles.taskCheckbox} />
-                <div style={styles.taskContent}>
-                  <p style={styles.taskTitle}>Submit monthly report</p>
-                  <span style={styles.taskDue}>Due: Mar 18, 2026</span>
-                </div>
-              </div>
-              <div style={styles.taskItem}>
-                <input type="checkbox" style={styles.taskCheckbox} />
-                <div style={styles.taskContent}>
-                  <p style={styles.taskTitle}>Complete training module</p>
-                  <span style={styles.taskDue}>Due: Mar 20, 2026</span>
-                </div>
-              </div>
+              {pendingTasks.length > 0 ? (
+                pendingTasks.slice(0, 3).map((task) => {
+                  const dueDate = new Date(task.dueDate);
+                  const today = new Date();
+                  const isOverdue = dueDate < today;
+                  
+                  return (
+                    <div key={task._id} style={styles.taskItem}>
+                      <input 
+                        type="checkbox" 
+                        style={styles.taskCheckbox}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            // Optional: Call update task status API
+                          }
+                        }}
+                      />
+                      <div style={styles.taskContent}>
+                        <p style={styles.taskTitle}>{task.title}</p>
+                        <span style={{
+                          ...styles.taskDue,
+                          color: isOverdue ? '#ef4444' : '#f59e0b'
+                        }}>
+                          Due: {dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p style={styles.taskTitle}>No pending tasks</p>
+              )}
             </div>
             <button 
               style={styles.viewAllButton}
