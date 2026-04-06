@@ -59,3 +59,39 @@ exports.updateLeaveStatus = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getLeaveBalance = async (req, res, next) => {
+  try {
+    const employee = await Employee.findOne({ user: req.user.id });
+    if (!employee) return res.status(404).json({ error: 'Employee profile not found' });
+
+    // Get all leaves for the employee
+    const leaves = await Leave.find({ employee: employee._id });
+
+    // Calculate used and pending days
+    let usedDays = 0;
+    let pendingDays = 0;
+
+    leaves.forEach((leave) => {
+      const days = Math.ceil((new Date(leave.endDate) - new Date(leave.startDate)) / (1000 * 60 * 60 * 24)) + 1;
+      if (leave.status === 'approved') {
+        usedDays += days;
+      } else if (leave.status === 'pending') {
+        pendingDays += days;
+      }
+    });
+
+    // Get leave balance from employee record
+    const balance = {
+      sick: employee.leaveBalance.sickLeave,
+      vacation: employee.leaveBalance.vacationLeave,
+      personal: employee.leaveBalance.personalLeave,
+      used: usedDays,
+      pending: pendingDays
+    };
+
+    res.json(balance);
+  } catch (err) {
+    next(err);
+  }
+};

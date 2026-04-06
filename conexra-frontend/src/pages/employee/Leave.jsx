@@ -9,7 +9,7 @@ import {
   FaUser,
   FaChevronDown,
 } from "react-icons/fa";
-import { getLeaves, applyLeave } from "../../services/leaveService";
+import { getLeaves, applyLeave, getLeaveBalance } from "../../services/leaveService";
 
 // Add global styles for animations
 const globalStyles = `
@@ -64,11 +64,11 @@ function MyLeave() {
   const [showForm, setShowForm] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [leaveBalance, setLeaveBalance] = useState({
-    sick: 12,
-    vacation: 15,
-    personal: 5,
-    used: 3,
-    pending: 1,
+    sick: 0,
+    vacation: 0,
+    personal: 0,
+    used: 0,
+    pending: 0,
   });
   const [newRequest, setNewRequest] = useState({
     leaveType: "sick",
@@ -83,9 +83,9 @@ function MyLeave() {
     setLoading(true);
     setError(null);
 
-    getLeaves()
-      .then((data) => {
-        const mapped = data.map((item) => ({
+    Promise.all([getLeaves(), getLeaveBalance()])
+      .then(([leavesData, balanceData]) => {
+        const mapped = leavesData.map((item) => ({
           id: item._id || item.id,
           leaveType: item.type || item.leaveType || "Unknown",
           startDate: item.startDate?.split("T")[0] || "",
@@ -99,6 +99,13 @@ function MyLeave() {
 
         setLeaveRequests(mapped);
         setFilteredRequests(mapped);
+        setLeaveBalance({
+          sick: balanceData.sick || 0,
+          vacation: balanceData.vacation || 0,
+          personal: balanceData.personal || 0,
+          used: balanceData.used || 0,
+          pending: balanceData.pending || 0,
+        });
       })
       .catch((err) => setError(err?.response?.data?.error || err.message))
       .finally(() => setLoading(false));
@@ -161,11 +168,19 @@ function MyLeave() {
         };
 
         setLeaveRequests((prev) => [newReq, ...prev]);
-        setLeaveBalance((prev) => ({
-          ...prev,
-          pending: prev.pending + 1,
-          used: prev.used + days,
-        }));
+        
+        // Refresh leave balance
+        getLeaveBalance()
+          .then((balanceData) => {
+            setLeaveBalance({
+              sick: balanceData.sick || 0,
+              vacation: balanceData.vacation || 0,
+              personal: balanceData.personal || 0,
+              used: balanceData.used || 0,
+              pending: balanceData.pending || 0,
+            });
+          })
+          .catch((err) => console.error("Failed to refresh balance:", err));
 
         setNewRequest({ leaveType: "sick", startDate: "", endDate: "", reason: "" });
         setShowForm(false);

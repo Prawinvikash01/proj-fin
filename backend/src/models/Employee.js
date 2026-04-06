@@ -12,6 +12,11 @@ const employeeSchema = new mongoose.Schema({
     url: String,
     uploadedAt: { type: Date, default: Date.now }
   }],
+  leaveBalance: {
+    sickLeave: { type: Number, default: 12 },
+    vacationLeave: { type: Number, default: 15 },
+    personalLeave: { type: Number, default: 5 }
+  },
   status: { type: String, enum: ['active', 'inactive', 'terminated'], default: 'active' },
   createdAt: { type: Date, default: Date.now }
 });

@@ -6,6 +6,12 @@ export const getLeaves = async () => {
   return response.data;
 };
 
+export const getLeaveBalance = async () => {
+  const response = await api.get('/leaves/balance');
+  console.log('Fetched leave balance:', response.data);
+  return response.data;
+};
+
 export const applyLeave = async (payload) => {
   console.log('Applying for leave with payload:', payload);
   const response = await api.post('/leaves', payload);
