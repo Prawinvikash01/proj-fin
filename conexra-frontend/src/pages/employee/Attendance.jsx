@@ -9,7 +9,7 @@ import {
   FaUserCheck,
   FaUserTimes
 } from "react-icons/fa";
-import { getAttendance, checkIn, checkOut } from "../../services/attendanceService";
+import { getAttendance, checkIn, checkOut, getTodayStatus } from "../../services/attendanceService";
 
 function MyAttendance() {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -29,18 +29,29 @@ function MyAttendance() {
     setLoading(true);
     setError(null);
 
-    getAttendance()
-      .then((records) => {
-        const history = records.map((item) => ({
-          id: item._id || item.id,
-          date: item.date ? item.date.split('T')[0] : new Date().toISOString().split('T')[0],
-          day: item.date ? new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' }) : '',
-          checkIn: item.checkIn || '-',
-          checkOut: item.checkOut || '-',
-          status: item.status || 'present',
-          late: item.late || false,
-          hours: item.hours || (item.checkIn && item.checkOut ? '8h 0m' : '-')
-        }));
+    Promise.all([getAttendance(), getTodayStatus()])
+      .then(([records, todayStatus]) => {
+        const history = records.map((item) => {
+          const checkInTime = new Date(item.checkIn);
+          const checkOutTime = item.checkOut ? new Date(item.checkOut) : null;
+          let hoursWorked = '-';
+          
+          if (checkInTime && checkOutTime) {
+            const hours = (checkOutTime - checkInTime) / (1000 * 60 * 60);
+            hoursWorked = `${Math.floor(hours)}h ${Math.round((hours % 1) * 60)}m`;
+          }
+
+          return {
+            id: item._id || item.id,
+            date: item.date ? item.date.split('T')[0] : new Date().toISOString().split('T')[0],
+            day: item.date ? new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' }) : '',
+            checkIn: item.checkIn ? new Date(item.checkIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-',
+            checkOut: item.checkOut ? new Date(item.checkOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-',
+            status: item.status || 'absent',
+            late: item.status === 'late',
+            hours: hoursWorked
+          };
+        });
 
         setAttendanceHistory(history);
 
@@ -54,6 +65,11 @@ function MyAttendance() {
           late,
           totalDays: history.length,
         });
+
+        // Set today's status
+        if (todayStatus) {
+          setAttendanceStatus(todayStatus.status || 'checked-out');
+        }
       })
       .catch((err) => {
         setError(err?.response?.data?.error || err.message);
@@ -74,20 +90,33 @@ function MyAttendance() {
       .then(() => {
         setAttendanceStatus("checked-in");
         alert(`Checked in successfully at ${currentTime.toLocaleTimeString()}`);
-        return getAttendance();
+        // Refresh data
+        return Promise.all([getAttendance(), getTodayStatus()]);
       })
-      .then((records) => {
-        const history = records.map((item) => ({
-          id: item._id || item.id,
-          date: item.date ? item.date.split('T')[0] : new Date().toISOString().split('T')[0],
-          day: item.date ? new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' }) : '',
-          checkIn: item.checkIn || '-',
-          checkOut: item.checkOut || '-',
-          status: item.status || 'present',
-          late: item.late || false,
-          hours: item.hours || (item.checkIn && item.checkOut ? '8h 0m' : '-')
-        }));
+      .then(([records, todayStatus]) => {
+        const history = records.map((item) => {
+          const checkInTime = new Date(item.checkIn);
+          const checkOutTime = item.checkOut ? new Date(item.checkOut) : null;
+          let hoursWorked = '-';
+          
+          if (checkInTime && checkOutTime) {
+            const hours = (checkOutTime - checkInTime) / (1000 * 60 * 60);
+            hoursWorked = `${Math.floor(hours)}h ${Math.round((hours % 1) * 60)}m`;
+          }
+
+          return {
+            id: item._id || item.id,
+            date: item.date ? item.date.split('T')[0] : new Date().toISOString().split('T')[0],
+            day: item.date ? new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' }) : '',
+            checkIn: item.checkIn ? new Date(item.checkIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-',
+            checkOut: item.checkOut ? new Date(item.checkOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-',
+            status: item.status || 'absent',
+            late: item.status === 'late',
+            hours: hoursWorked
+          };
+        });
         setAttendanceHistory(history);
+        setAttendanceStatus(todayStatus.status || 'checked-in');
       })
       .catch((err) => {
         setError(err?.response?.data?.error || err.message);
@@ -99,20 +128,33 @@ function MyAttendance() {
       .then(() => {
         setAttendanceStatus("checked-out");
         alert(`Checked out successfully at ${currentTime.toLocaleTimeString()}`);
-        return getAttendance();
+        // Refresh data
+        return Promise.all([getAttendance(), getTodayStatus()]);
       })
-      .then((records) => {
-        const history = records.map((item) => ({
-          id: item._id || item.id,
-          date: item.date ? item.date.split('T')[0] : new Date().toISOString().split('T')[0],
-          day: item.date ? new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' }) : '',
-          checkIn: item.checkIn || '-',
-          checkOut: item.checkOut || '-',
-          status: item.status || 'present',
-          late: item.late || false,
-          hours: item.hours || (item.checkIn && item.checkOut ? '8h 0m' : '-')
-        }));
+      .then(([records, todayStatus]) => {
+        const history = records.map((item) => {
+          const checkInTime = new Date(item.checkIn);
+          const checkOutTime = item.checkOut ? new Date(item.checkOut) : null;
+          let hoursWorked = '-';
+          
+          if (checkInTime && checkOutTime) {
+            const hours = (checkOutTime - checkInTime) / (1000 * 60 * 60);
+            hoursWorked = `${Math.floor(hours)}h ${Math.round((hours % 1) * 60)}m`;
+          }
+
+          return {
+            id: item._id || item.id,
+            date: item.date ? item.date.split('T')[0] : new Date().toISOString().split('T')[0],
+            day: item.date ? new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' }) : '',
+            checkIn: item.checkIn ? new Date(item.checkIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-',
+            checkOut: item.checkOut ? new Date(item.checkOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-',
+            status: item.status || 'absent',
+            late: item.status === 'late',
+            hours: hoursWorked
+          };
+        });
         setAttendanceHistory(history);
+        setAttendanceStatus(todayStatus.status || 'checked-out');
       })
       .catch((err) => {
         setError(err?.response?.data?.error || err.message);

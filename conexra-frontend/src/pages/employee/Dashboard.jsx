@@ -11,6 +11,8 @@ import {
   FaUserCheck,
   FaUserTimes
 } from "react-icons/fa";
+import { checkIn, checkOut, getTodayStatus, getDashboardStats } from "../../services/attendanceService";
+import { getLeaveBalance } from "../../services/leaveService";
 
 function EmployeeDashboard() {
   const navigate = useNavigate();
@@ -18,12 +20,21 @@ function EmployeeDashboard() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [attendanceStatus, setAttendanceStatus] = useState("checked-out");
   const [stats, setStats] = useState({
-    presentDays: 18,
-    absentDays: 2,
-    leaveBalance: 12,
+    presentDays: 0,
+    absentDays: 0,
+    leaveBalance: 0,
     pendingTasks: 3,
     completedTasks: 8
   });
+  const [leaveDetails, setLeaveDetails] = useState({
+    sick: 0,
+    vacation: 0,
+    personal: 0,
+    used: 0,
+    pending: 0
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -32,6 +43,39 @@ function EmployeeDashboard() {
     } else {
       navigate("/");
     }
+  }, [navigate]);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+
+    // Fetch dashboard stats and today's attendance status
+    Promise.all([getDashboardStats(), getTodayStatus(), getLeaveBalance()])
+      .then(([dashStats, todayStatus, leaveBalance]) => {
+        setStats(prev => ({
+          ...prev,
+          presentDays: dashStats.presentDays || 0,
+          absentDays: dashStats.absentDays || 0,
+          leaveBalance: (leaveBalance.sick + leaveBalance.vacation + leaveBalance.personal) - (leaveBalance.used + leaveBalance.pending) || 0
+        }));
+        
+        setLeaveDetails({
+          sick: leaveBalance.sick || 0,
+          vacation: leaveBalance.vacation || 0,
+          personal: leaveBalance.personal || 0,
+          used: leaveBalance.used || 0,
+          pending: leaveBalance.pending || 0
+        });
+        
+        if (todayStatus) {
+          setAttendanceStatus(todayStatus.status || 'checked-out');
+        }
+      })
+      .catch((err) => {
+        console.error('Error fetching dashboard data:', err);
+        setError(err?.response?.data?.error || err.message);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -42,13 +86,39 @@ function EmployeeDashboard() {
   }, []);
 
   const handleCheckIn = () => {
-    setAttendanceStatus("checked-in");
-    alert(`Checked in successfully at ${currentTime.toLocaleTimeString()}`);
+    checkIn()
+      .then(() => {
+        setAttendanceStatus("checked-in");
+        alert(`Checked in successfully at ${currentTime.toLocaleTimeString()}`);
+        return Promise.all([getDashboardStats(), getTodayStatus()]);
+      })
+      .then(([dashStats, todayStatus]) => {
+        setStats(prev => ({
+          ...prev,
+          presentDays: dashStats.presentDays || 0,
+          absentDays: dashStats.absentDays || 0,
+        }));
+        setAttendanceStatus(todayStatus.status || 'checked-in');
+      })
+      .catch((err) => setError(err?.response?.data?.error || err.message));
   };
 
   const handleCheckOut = () => {
-    setAttendanceStatus("checked-out");
-    alert(`Checked out successfully at ${currentTime.toLocaleTimeString()}`);
+    checkOut()
+      .then(() => {
+        setAttendanceStatus("checked-out");
+        alert(`Checked out successfully at ${currentTime.toLocaleTimeString()}`);
+        return Promise.all([getDashboardStats(), getTodayStatus()]);
+      })
+      .then(([dashStats, todayStatus]) => {
+        setStats(prev => ({
+          ...prev,
+          presentDays: dashStats.presentDays || 0,
+          absentDays: dashStats.absentDays || 0,
+        }));
+        setAttendanceStatus(todayStatus.status || 'checked-out');
+      })
+      .catch((err) => setError(err?.response?.data?.error || err.message));
   };
 
   const formatDate = (date) => {
@@ -613,15 +683,18 @@ function EmployeeDashboard() {
       <div style={styles.leaveProgressCard}>
         <div style={styles.leaveProgressHeader}>
           <h2 style={styles.cardTitle}>Leave Balance</h2>
-          <span style={styles.leaveTotal}>12 days remaining</span>
+          <span style={styles.leaveTotal}>{stats.leaveBalance} days remaining</span>
         </div>
         <div style={styles.progressBarContainer}>
-          <div style={styles.progressBarFill}></div>
+          <div style={{
+            ...styles.progressBarFill,
+            width: `${(leaveDetails.sick + leaveDetails.vacation + leaveDetails.personal) > 0 ? ((leaveDetails.used + leaveDetails.pending) / (leaveDetails.sick + leaveDetails.vacation + leaveDetails.personal)) * 100 : 0}%`
+          }}></div>
         </div>
         <div style={styles.leaveDetails}>
-          <span>Sick Leave: 8 days</span>
-          <span>Vacation: 4 days</span>
-          <span>Personal: 0 days</span>
+          <span>Sick Leave: {leaveDetails.sick} days</span>
+          <span>Vacation: {leaveDetails.vacation} days</span>
+          <span>Personal: {leaveDetails.personal} days</span>
         </div>
       </div>
     </div>
