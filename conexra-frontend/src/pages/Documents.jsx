@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { FaFolderOpen, FaUpload, FaTrash, FaSyncAlt } from 'react-icons/fa';
 import { getDocuments, uploadDocument, deleteDocument } from '../services/documentService';
+import { getEmployees } from '../services/employeeService';
 
 function Documents() {
   const [docs, setDocs] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [newName, setNewName] = useState('');
-  const [newUrl, setNewUrl] = useState('');
+  const [newDoc, setNewDoc] = useState({ employeeId: '', name: '', url: '', category: 'Other' });
 
   const loadDocs = async () => {
     setLoading(true);
@@ -22,21 +23,35 @@ function Documents() {
     }
   };
 
+  const loadEmployees = async () => {
+    try {
+      const data = await getEmployees();
+      setEmployees(data);
+    } catch (err) {
+      console.error('Failed to load employees', err);
+    }
+  };
+
   useEffect(() => {
     loadDocs();
+    loadEmployees();
   }, []);
 
   const onUpload = async () => {
-    if (!newName || !newUrl) {
+    if (!newDoc.name || !newDoc.url) {
       setError('Both document name and URL are required');
       return;
     }
 
     try {
-      const created = await uploadDocument({ name: newName, url: newUrl });
+      const created = await uploadDocument({
+        employeeId: newDoc.employeeId,
+        name: newDoc.name,
+        url: newDoc.url,
+        category: newDoc.category
+      });
       setDocs((p) => [created, ...p]);
-      setNewName('');
-      setNewUrl('');
+      setNewDoc({ employeeId: '', name: '', url: '', category: 'Other' });
       setError(null);
     } catch (err) {
       setError(err?.response?.data?.error || err.message);
@@ -66,18 +81,39 @@ function Documents() {
       {error && <div style={errorStyle}>{error}</div>}
 
       <div style={addRow}>
+        <select
+          value={newDoc.employeeId}
+          onChange={(e) => setNewDoc((doc) => ({ ...doc, employeeId: e.target.value }))}
+          style={inputStyle}
+        >
+          <option value="">All employees</option>
+          {employees.map((emp) => (
+            <option key={emp._id || emp.id} value={emp._id || emp.id}>
+              {emp.user?.name || emp.user?.email}
+            </option>
+          ))}
+        </select>
         <input
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
+          value={newDoc.name}
+          onChange={(e) => setNewDoc((doc) => ({ ...doc, name: e.target.value }))}
           placeholder="Document name"
           style={inputStyle}
         />
         <input
-          value={newUrl}
-          onChange={(e) => setNewUrl(e.target.value)}
+          value={newDoc.url}
+          onChange={(e) => setNewDoc((doc) => ({ ...doc, url: e.target.value }))}
           placeholder="Document URL"
           style={inputStyle}
         />
+        <select
+          value={newDoc.category}
+          onChange={(e) => setNewDoc((doc) => ({ ...doc, category: e.target.value }))}
+          style={inputStyle}
+        >
+          <option value="Other">Other</option>
+          <option value="HR">HR</option>
+          <option value="Legal">Legal</option>
+        </select>
         <button onClick={onUpload} style={addButton}>
           <FaUpload /> Upload
         </button>
@@ -92,22 +128,32 @@ function Documents() {
               <tr>
                 <th style={th}>Name</th>
                 <th style={th}>Link</th>
-                <th style={th}>Uploaded</th>
+                <th style={th}>Employee</th>
+                <th style={th}>Category</th>
+                <th style={th}>Uploaded By</th>
+                <th style={th}>Uploaded At</th>
                 <th style={th}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {(docs.length === 0) ? (
                 <tr>
-                  <td style={td} colSpan={4}>No documents found.</td>
+                  <td style={td} colSpan={7}>No documents found.</td>
                 </tr>
               ) : docs.map((doc) => (
                 <tr key={doc._id || doc.id}>
                   <td style={td}>{doc.name}</td>
-                  <td style={td}><a target="_blank" rel="noreferrer" href={doc.url}>{doc.url}</a></td>
-                  <td style={td}>{new Date(doc.uploadedAt || doc.createdAt || Date.now()).toLocaleString()}</td>
                   <td style={td}>
-                    <button onClick={() => onDelete(doc._id || doc.id)} style={actionBtn}> <FaTrash /> </button>
+                    <a target="_blank" rel="noreferrer" href={doc.url}>{doc.url}</a>
+                  </td>
+                  <td style={td}>{doc.employee?.user?.name || 'All employees'}</td>
+                  <td style={td}>{doc.category || 'Other'}</td>
+                  <td style={td}>{doc.uploadedBy?.name || 'Unknown'}</td>
+                  <td style={td}>{new Date(doc.uploadedAt || Date.now()).toLocaleString()}</td>
+                  <td style={td}>
+                    <button onClick={() => onDelete(doc._id || doc.id)} style={actionBtn}>
+                      <FaTrash />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -124,8 +170,8 @@ const headerStyle = { display: 'flex', justifyContent: 'space-between', alignIte
 const pageTitle = { fontSize: '28px', color: '#0f172a', margin: 0 };
 const refreshButton = { border: 'none', background: '#3b82f6', color: 'white', padding: '8px 14px', borderRadius: '8px', cursor: 'pointer' };
 const errorStyle = { marginBottom: '16px', color: '#b91c1c', fontWeight: 600 };
-const addRow = { display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' };
-const inputStyle = { padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', minWidth: '160px' };
+const addRow = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' };
+const inputStyle = { padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', width: '100%' };
 const addButton = { background: '#10b981', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer' };
 const tableContainer = { background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflowX: 'auto' };
 const table = { width: '100%', borderCollapse: 'collapse' };

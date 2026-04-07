@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FaBell, FaCheckDouble, FaSyncAlt } from 'react-icons/fa';
-import { getNotifications, markAllAsRead } from '../services/notificationService';
+import { getNotifications, markAllAsRead, markNotificationAsRead } from '../services/notificationService';
 
 function Notifications() {
   const [notifications, setNotifications] = useState([]);
@@ -31,6 +31,17 @@ function Notifications() {
     }
   };
 
+  const onMarkNotificationRead = async (id) => {
+    try {
+      await markNotificationAsRead(id);
+      setNotifications((prev) => prev.map((item) => (
+        (item._id || item.id) === id ? { ...item, read: true } : item
+      )));
+    } catch (err) {
+      setError(err?.response?.data?.error || err.message);
+    }
+  };
+
   return (
     <div style={pageContainer}>
       <div style={headerStyle}>
@@ -52,6 +63,14 @@ function Notifications() {
             >
               <div style={itemTitle}><FaBell /> {item.message}</div>
               <div style={itemSub}>{new Date(item.createdAt || item.updatedAt || Date.now()).toLocaleString()}</div>
+              {!item.read && (
+                <button
+                  onClick={() => onMarkNotificationRead(item._id || item.id)}
+                  style={markSingleButton}
+                >
+                  Mark read
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -71,5 +90,6 @@ const item = { padding: '10px', border: '1px solid #e2e8f0', borderRadius: '8px'
 const itemStyle = { padding: '14px', border: '1px solid #e2e8f0', borderRadius: '8px' };
 const itemTitle = { fontWeight: 600, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' };
 const itemSub = { fontSize: '12px', color: '#64748b' };
+const markSingleButton = { marginTop: '10px', border: 'none', background: '#2563eb', color: 'white', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer' };
 
 export default Notifications;
