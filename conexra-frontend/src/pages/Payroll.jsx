@@ -205,10 +205,10 @@ function Payroll() {
                   <tr key={item._id || item.id}>
                     <td style={td}>{employeeName}</td>
                     <td style={td}>{item.month || 'N/A'}</td>
-                    <td style={td}>${salary.toLocaleString()}</td>
-                    <td style={td}>${bonuses.toLocaleString()}</td>
-                    <td style={td}>${deductions.toLocaleString()}</td>
-                    <td style={td}>${netPay.toLocaleString()}</td>
+                    <td style={td}>{salary.toLocaleString()}</td>
+                    <td style={td}>{bonuses.toLocaleString()}</td>
+                    <td style={td}>{deductions.toLocaleString()}</td>
+                    <td style={td}>{netPay.toLocaleString()}</td>
                     <td style={td}>
                       {item.payslipUrl ? (
                         <a href={item.payslipUrl} target="_blank" rel="noreferrer" style={{ color: '#000' }}>View</a>
@@ -242,15 +242,29 @@ function Payroll() {
   );
 }
 
-const pageContainer = { width: '100%', maxWidth: '1400px', margin: '0 auto' };
+const pageContainer = { width: '100%', maxWidth: '1400px', margin: '0 auto' ,background:"" };
 const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', color: '#000' };
 const pageTitle = { fontSize: '28px', color: '#000', margin: 0 };
 const refreshButton = { border: 'none', background: '#3b82f6', color: 'white', padding: '8px 14px', borderRadius: '8px', cursor: 'pointer' };
 const errorStyle = { marginBottom: '16px', color: '#b91c1c', fontWeight: 600 };
-const panel = { marginBottom: '24px', padding: '20px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', color: '#000' };
+const panel = { marginBottom: '24px', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', color: '#000' };
 const panelTitle = { margin: 0, marginBottom: '16px', fontSize: '20px', color: '#000' };
-const formRow = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '12px' };
-const inputStyle = { padding: '12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', width: '100%', color: 'gray' };
+const formRow = {
+  display: 'flex',
+  // gridTemplateColumns: 'repeat(3, 1fr)',
+  // gap: '16px',
+  gap: '12px',
+  marginBottom: '16px',
+};
+
+// @media (max-width: 900px) {
+//   gridTemplateColumns: 'repeat(2, 1fr)';
+// }
+
+// @media (max-width: 600px) {
+//   gridTemplateColumns: '1fr';
+// }
+const inputStyle = { padding: '12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', width: '100%', color: 'gray'  };
 const formActions = { display: 'flex', gap: '12px', flexWrap: 'wrap' };
 const saveButton = { background: '#10b981', color: 'white', border: 'none', padding: '12px 18px', borderRadius: '8px', cursor: 'pointer' };
 const cancelButton = { background: '#64748b', color: 'white', border: 'none', padding: '12px 18px', borderRadius: '8px', cursor: 'pointer' };

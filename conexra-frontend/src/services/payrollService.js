@@ -7,7 +7,7 @@ export const getPayrolls = async () => {
 
 export const createPayroll = async (payload) => {
   const response = await api.post('/payrolls', payload);
-  return response.data;
+  return response.data.payroll;
 };
 
 export const updatePayroll = async (id, payload) => {
