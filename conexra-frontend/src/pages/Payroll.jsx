@@ -6,7 +6,7 @@ import { getEmployees } from '../services/employeeService';
 function Payroll() {
   const [payrolls, setPayrolls] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [newPayroll, setNewPayroll] = useState({ employeeId: '', salary: '', month: '', bonuses: 0, deductions: 0, payslipUrl: '' });
+  const [newPayroll, setNewPayroll] = useState({ employeeId: '', salary: '', month: '', bonuses: '', deductions: '', payslipUrl: '' });
   const [editingPayroll, setEditingPayroll] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -41,7 +41,7 @@ function Payroll() {
 
   const resetForm = () => {
     setEditingPayroll(null);
-    setNewPayroll({ employeeId: '', salary: '', month: '', bonuses: 0, deductions: 0, payslipUrl: '' });
+    setNewPayroll({ employeeId: '', salary: '', month: '', bonuses: '', deductions: '', payslipUrl: '' });
     setError(null);
   };
 
@@ -85,8 +85,8 @@ function Payroll() {
       employeeId: item.employee?._id || item.employeeId || '',
       salary: item.salary || '',
       month: item.month || '',
-      bonuses: item.bonuses || 0,
-      deductions: item.deductions || 0,
+      bonuses: item.bonuses != null ? item.bonuses.toString() : '',
+      deductions: item.deductions != null ? item.deductions.toString() : '',
       payslipUrl: item.payslipUrl || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -143,7 +143,7 @@ function Payroll() {
           />
         </div>
         <div style={formRow}>
-          <input
+            <input
             type="number"
             value={newPayroll.bonuses}
             onChange={(e) => setNewPayroll((p) => ({ ...p, bonuses: e.target.value }))}
@@ -211,7 +211,7 @@ function Payroll() {
                     <td style={td}>${netPay.toLocaleString()}</td>
                     <td style={td}>
                       {item.payslipUrl ? (
-                        <a href={item.payslipUrl} target="_blank" rel="noreferrer">View</a>
+                        <a href={item.payslipUrl} target="_blank" rel="noreferrer" style={{ color: '#000' }}>View</a>
                       ) : (
                         'N/A'
                       )}
@@ -243,21 +243,21 @@ function Payroll() {
 }
 
 const pageContainer = { width: '100%', maxWidth: '1400px', margin: '0 auto' };
-const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' };
-const pageTitle = { fontSize: '28px', color: '#0f172a', margin: 0 };
+const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', color: '#000' };
+const pageTitle = { fontSize: '28px', color: '#000', margin: 0 };
 const refreshButton = { border: 'none', background: '#3b82f6', color: 'white', padding: '8px 14px', borderRadius: '8px', cursor: 'pointer' };
 const errorStyle = { marginBottom: '16px', color: '#b91c1c', fontWeight: 600 };
-const panel = { marginBottom: '24px', padding: '20px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' };
-const panelTitle = { margin: 0, marginBottom: '16px', fontSize: '20px', color: '#0f172a' };
+const panel = { marginBottom: '24px', padding: '20px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', color: '#000' };
+const panelTitle = { margin: 0, marginBottom: '16px', fontSize: '20px', color: '#000' };
 const formRow = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '12px' };
-const inputStyle = { padding: '12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', width: '100%' };
+const inputStyle = { padding: '12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', width: '100%', color: 'gray' };
 const formActions = { display: 'flex', gap: '12px', flexWrap: 'wrap' };
 const saveButton = { background: '#10b981', color: 'white', border: 'none', padding: '12px 18px', borderRadius: '8px', cursor: 'pointer' };
 const cancelButton = { background: '#64748b', color: 'white', border: 'none', padding: '12px 18px', borderRadius: '8px', cursor: 'pointer' };
-const tableContainer = { background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflowX: 'auto' };
-const table = { width: '100%', borderCollapse: 'collapse' };
-const th = { textAlign: 'left', padding: '12px', borderBottom: '2px solid #e2e8f0', background: '#f8fafc' };
-const td = { padding: '12px', borderBottom: '1px solid #e2e8f0', verticalAlign: 'middle' };
+const tableContainer = { background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflowX: 'auto', color: '#000' };
+const table = { width: '100%', borderCollapse: 'collapse', color: '#000' };
+const th = { textAlign: 'left', padding: '12px', borderBottom: '2px solid #e2e8f0', background: '#f8fafc', color: '#000' };
+const td = { padding: '12px', borderBottom: '1px solid #e2e8f0', verticalAlign: 'middle', color: '#000' };
 const actionGroup = { display: 'flex', gap: '10px', flexWrap: 'wrap' };
 const editButton = { border: 'none', background: '#3b82f6', color: 'white', borderRadius: '6px', padding: '8px 10px', cursor: 'pointer' };
 const deleteButton = { border: 'none', background: '#ef4444', color: 'white', borderRadius: '6px', padding: '8px 10px', cursor: 'pointer' };

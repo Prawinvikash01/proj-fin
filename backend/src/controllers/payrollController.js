@@ -19,7 +19,10 @@ exports.createPayroll = async (req, res, next) => {
       payslipUrl
     });
     await payroll.save();
-    const populatedPayroll = await payroll.populate('employee');
+    const populatedPayroll = await Payroll.findById(payroll._id).populate({
+      path: 'employee',
+      populate: { path: 'user', select: 'name email' }
+    });
     res.status(201).json({ message: 'Payroll created', payroll: populatedPayroll });
   } catch (err) {
     next(err);
@@ -34,7 +37,10 @@ exports.getPayrolls = async (req, res, next) => {
       if (!employee) return res.status(404).json({ error: 'Employee profile not found' });
       query.employee = employee._id;
     }
-    const payrolls = await Payroll.find(query).populate('employee');
+    const payrolls = await Payroll.find(query).populate({
+      path: 'employee',
+      populate: { path: 'user', select: 'name email' }
+    });
     res.json(payrolls);
   } catch (err) {
     next(err);
@@ -43,7 +49,7 @@ exports.getPayrolls = async (req, res, next) => {
 
 exports.updatePayroll = async (req, res, next) => {
   try {
-    const { employeeId, salary, bonuses, deductions, month, payslipUrl } = req.body;
+    const { employeeId } = req.body;
     const payload = req.body;
 
     if (employeeId) {
@@ -53,7 +59,10 @@ exports.updatePayroll = async (req, res, next) => {
 
     const payroll = await Payroll.findByIdAndUpdate(req.params.id, payload, { new: true });
     if (!payroll) return res.status(404).json({ error: 'Payroll entry not found' });
-    const populatedPayroll = await payroll.populate('employee');
+    const populatedPayroll = await Payroll.findById(payroll._id).populate({
+      path: 'employee',
+      populate: { path: 'user', select: 'name email' }
+    });
     res.json(populatedPayroll);
   } catch (err) {
     next(err);
