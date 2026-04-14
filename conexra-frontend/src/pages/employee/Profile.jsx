@@ -14,12 +14,16 @@ import {
   FaCamera,
   FaCheckCircle
 } from "react-icons/fa";
+import { getCurrentProfile, updateCurrentProfile, changePassword } from "../../services/employeeService";
 
 function MyProfile() {
   const [user, setUser] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [profileError, setProfileError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
   
   // Profile form state
   const [profileForm, setProfileForm] = useState({
@@ -44,27 +48,36 @@ function MyProfile() {
 
   const [passwordError, setPasswordError] = useState("");
 
-  // Load user data
+  // Load user data from API
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const userData = JSON.parse(storedUser);
-      setUser(userData);
-      
-      // Mock profile data (in real app, fetch from API)
-      setProfileForm({
-        name: userData.name || "John Doe",
-        email: userData.email || "john@conexra.com",
-        phone: "+1 (555) 123-4567",
-        address: "123 Main Street",
-        city: "New York",
-        country: "USA",
-        department: "Engineering",
-        position: "Senior Developer",
-        employeeId: "EMP00" + (userData.id || 1),
-        joinDate: "2024-01-15"
-      });
-    }
+    const fetchProfile = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getCurrentProfile();
+        const currentUser = data.user || JSON.parse(localStorage.getItem("user") || "{}");
+        const employee = data.employee || {};
+        setUser(currentUser);
+        setProfileForm({
+          name: currentUser.name || "John Doe",
+          email: currentUser.email || "john@conexra.com",
+          phone: employee.phone || "",
+          address: employee.address || "",
+          city: employee.city || "",
+          country: employee.country || "",
+          department: employee.department || "",
+          position: employee.position || "",
+          employeeId: employee._id ? `EMP${employee._id.toString().slice(-6).toUpperCase()}` : "",
+          joinDate: employee.dateOfJoining ? new Date(employee.dateOfJoining).toISOString().split('T')[0] : ""
+        });
+      } catch (err) {
+        console.error(err);
+        setProfileError(err?.response?.data?.error || "Unable to load profile data.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
   }, []);
 
   const handleInputChange = (e) => {
@@ -77,28 +90,54 @@ function MyProfile() {
     setPasswordForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveProfile = () => {
-    // Simulate API call
-    setTimeout(() => {
+  const handleSaveProfile = async () => {
+    setProfileError("");
+
+    try {
+      const payload = {
+        name: profileForm.name,
+        email: profileForm.email,
+        position: profileForm.position,
+        department: profileForm.department,
+        phone: profileForm.phone,
+        address: profileForm.address,
+        city: profileForm.city,
+        country: profileForm.country,
+      };
+
+      const data = await updateCurrentProfile(payload);
+      const updatedUser = data.user || user;
+      const employee = data.employee || {};
+
+      setUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setProfileForm((prev) => ({
+        ...prev,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        position: employee.position || prev.position,
+        department: employee.department || prev.department,
+        phone: employee.phone || prev.phone,
+        address: employee.address || prev.address,
+        city: employee.city || prev.city,
+        country: employee.country || prev.country,
+        employeeId: employee._id ? `EMP${employee._id.toString().slice(-6).toUpperCase()}` : prev.employeeId,
+        joinDate: employee.dateOfJoining ? new Date(employee.dateOfJoining).toISOString().split('T')[0] : prev.joinDate,
+      }));
+
       setSaveSuccess(true);
       setIsEditing(false);
-      
-      // Hide success message after 3 seconds
       setTimeout(() => setSaveSuccess(false), 3000);
-      
-      // Update local storage name if changed
-      if (user) {
-        const updatedUser = { ...user, name: profileForm.name };
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-        setUser(updatedUser);
-      }
-    }, 500);
+    } catch (err) {
+      console.error(err);
+      setProfileError(err?.response?.data?.error || "Failed to update profile. Please try again.");
+    }
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     setPasswordError("");
+    setPasswordSuccess("");
 
-    // Validation
     if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
       setPasswordError("All fields are required");
       return;
@@ -114,16 +153,24 @@ function MyProfile() {
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      alert("Password changed successfully!");
+    try {
+      await changePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+        confirmPassword: passwordForm.confirmPassword,
+      });
+
+      setPasswordSuccess("Password changed successfully!");
       setShowPasswordModal(false);
       setPasswordForm({
         currentPassword: "",
         newPassword: "",
         confirmPassword: ""
       });
-    }, 500);
+    } catch (err) {
+      console.error(err);
+      setPasswordError(err?.response?.data?.error || "Password change failed. Please try again.");
+    }
   };
 
   const formatDate = (dateString) => {
@@ -134,8 +181,12 @@ function MyProfile() {
     });
   };
 
-  if (!user) {
+  if (isLoading) {
     return <div style={styles.loading}>Loading...</div>;
+  }
+
+  if (!user) {
+    return <div style={styles.loading}>{profileError || "No profile available."}</div>;
   }
 
   return (
@@ -168,11 +219,16 @@ function MyProfile() {
         )}
       </div>
 
-      {/* Success Message */}
+      {/* Success / Error Messages */}
       {saveSuccess && (
         <div style={styles.successMessage}>
           <FaCheckCircle style={styles.successIcon} />
           Profile updated successfully!
+        </div>
+      )}
+      {profileError && (
+        <div style={styles.errorMessage}>
+          {profileError}
         </div>
       )}
 
@@ -387,6 +443,9 @@ function MyProfile() {
               {passwordError && (
                 <div style={styles.modalError}>{passwordError}</div>
               )}
+            {passwordSuccess && (
+                <div style={styles.modalSuccess}>{passwordSuccess}</div>
+              )}
 
               <div style={styles.modalFormGroup}>
                 <label style={styles.modalLabel}>Current Password</label>
@@ -523,6 +582,15 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "10px",
+    fontSize: "14px",
+    fontWeight: "500",
+  },
+  errorMessage: {
+    background: "#fee2e2",
+    color: "#991b1b",
+    padding: "15px 20px",
+    borderRadius: "10px",
+    marginBottom: "20px",
     fontSize: "14px",
     fontWeight: "500",
   },
@@ -719,6 +787,14 @@ const styles = {
   modalError: {
     background: "#fee2e2",
     color: "#ef4444",
+    padding: "12px",
+    borderRadius: "8px",
+    fontSize: "14px",
+    marginBottom: "15px",
+  },
+  modalSuccess: {
+    background: "#d1fae5",
+    color: "#065f46",
     padding: "12px",
     borderRadius: "8px",
     fontSize: "14px",

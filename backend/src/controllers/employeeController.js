@@ -44,10 +44,10 @@ exports.getEmployee = async (req, res, next) => {
 
 exports.updateEmployee = async (req, res, next) => {
   try {
-    const { position, department, dateOfJoining, phone, address, status } = req.body;
+    const { position, department, dateOfJoining, phone, address, city, country, status } = req.body;
     const employee = await Employee.findByIdAndUpdate(
       req.params.id,
-      { position, department, dateOfJoining, phone, address, status },
+      { position, department, dateOfJoining, phone, address, city, country, status },
       { new: true }
     );
     if (!employee) return res.status(404).json({ error: 'Employee not found' });

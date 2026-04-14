@@ -7,6 +7,8 @@ const employeeSchema = new mongoose.Schema({
   dateOfJoining: { type: Date },
   phone: { type: String },
   address: { type: String },
+  city: { type: String },
+  country: { type: String },
   documents: [{
     name: String,
     url: String,

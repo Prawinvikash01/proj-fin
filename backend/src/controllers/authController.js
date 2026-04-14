@@ -1,8 +1,10 @@
 
 const User = require('../models/User');
+const Employee = require('../models/Employee');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const sendEmail = require('../utils/sendEmail');
+
 // Request password reset
 exports.forgotPassword = async (req, res, next) => {
   try {
@@ -16,6 +18,75 @@ exports.forgotPassword = async (req, res, next) => {
     const resetUrl = `${req.protocol}://${req.get('host')}/api/auth/reset-password/${token}`;
     await sendEmail(user.email, 'Password Reset', `Reset your password: ${resetUrl}`);
     res.json({ message: 'Password reset email sent' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Get current authenticated user profile
+exports.getCurrentUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password -resetPasswordToken -resetPasswordExpires');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const employee = await Employee.findOne({ user: req.user.id }).populate('user', 'name email role status');
+    res.json({ user, employee });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Update current authenticated user profile
+exports.updateCurrentUser = async (req, res, next) => {
+  try {
+    const { name, email, position, department, phone, address, city, country } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (name) user.name = name;
+    if (email) user.email = email;
+    await user.save();
+
+    const employeeUpdate = { position, department, phone, address, city, country };
+    Object.keys(employeeUpdate).forEach((key) => {
+      if (employeeUpdate[key] === undefined) delete employeeUpdate[key];
+    });
+
+    const employee = await Employee.findOneAndUpdate(
+      { user: req.user.id },
+      employeeUpdate,
+      { new: true, runValidators: true }
+    );
+
+    if (!employee) return res.status(404).json({ error: 'Employee record not found' });
+
+    res.json({ user: { id: user._id, name: user.name, email: user.email, role: user.role, status: user.status }, employee });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Change current authenticated user's password
+exports.changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ error: 'All password fields are required' });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: 'New passwords do not match' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) return res.status(401).json({ error: 'Current password is incorrect' });
+
+    user.password = newPassword;
+    await user.save();
+    res.json({ message: 'Password updated successfully' });
   } catch (err) {
     next(err);
   }

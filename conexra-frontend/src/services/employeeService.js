@@ -1,5 +1,20 @@
 import api from '../api';
 
+export const getCurrentProfile = async () => {
+  const response = await api.get('/auth/me');
+  return response.data;
+};
+
+export const updateCurrentProfile = async (payload) => {
+  const response = await api.put('/auth/me', payload);
+  return response.data;
+};
+
+export const changePassword = async (payload) => {
+  const response = await api.put('/auth/change-password', payload);
+  return response.data;
+};
+
 export const getEmployees = async () => {
   const response = await api.get('/employees');
   return response.data;
