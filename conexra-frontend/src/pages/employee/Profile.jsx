@@ -339,41 +339,9 @@ function MyProfile() {
                 </div>
               </div>
 
-              <div style={styles.infoItem}>
-                <FaBuilding style={styles.infoIcon} />
-                <div style={styles.infoContent}>
-                  <span style={styles.infoLabel}>City</span>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      name="city"
-                      value={profileForm.city}
-                      onChange={handleInputChange}
-                      style={styles.editInput}
-                    />
-                  ) : (
-                    <span style={styles.infoValue}>{profileForm.city}</span>
-                  )}
-                </div>
-              </div>
+             
 
-              <div style={styles.infoItem}>
-                <FaMapMarkerAlt style={styles.infoIcon} />
-                <div style={styles.infoContent}>
-                  <span style={styles.infoLabel}>Country</span>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      name="country"
-                      value={profileForm.country}
-                      onChange={handleInputChange}
-                      style={styles.editInput}
-                    />
-                  ) : (
-                    <span style={styles.infoValue}>{profileForm.country}</span>
-                  )}
-                </div>
-              </div>
+             
             </div>
           </div>
 
@@ -405,13 +373,7 @@ function MyProfile() {
                 </div>
               </div>
 
-              <div style={styles.infoItem}>
-                <FaCalendarAlt style={styles.infoIcon} />
-                <div style={styles.infoContent}>
-                  <span style={styles.infoLabel}>Join Date</span>
-                  <span style={styles.infoValue}>{formatDate(profileForm.joinDate)}</span>
-                </div>
-              </div>
+             
             </div>
           </div>
         </div>
