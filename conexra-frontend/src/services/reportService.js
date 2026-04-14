@@ -5,6 +5,11 @@ export const getEmployeeStats = async () => {
   return response.data;
 };
 
+export const getDashboardOverview = async () => {
+  const response = await api.get('/reports/dashboard');
+  return response.data;
+};
+
 export const getLeaveReport = async () => {
   const response = await api.get('/reports/leaves');
   return response.data;

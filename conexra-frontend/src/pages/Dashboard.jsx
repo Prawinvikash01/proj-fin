@@ -1,6 +1,6 @@
 import { FaUsers, FaUserCheck, FaCalendarAlt, FaTasks } from "react-icons/fa";
 import { useState, useEffect } from "react";
-import { getEmployeeStats } from "../services/reportService";
+import { getDashboardOverview } from "../services/reportService";
 
 function Dashboard() {
   const [stats, setStats] = useState({
@@ -8,30 +8,40 @@ function Dashboard() {
     active: 0,
     inactive: 0,
     terminated: 0,
+    pendingLeaves: 0,
   });
+  const [recentLeaves, setRecentLeaves] = useState([]);
+  const [recentCheckIns, setRecentCheckIns] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getEmployeeStats()
+    getDashboardOverview()
       .then((data) => {
         setStats({
-          totalEmployees: data.total || 0,
-          active: data.active || 0,
-          inactive: data.inactive || 0,
-          terminated: data.terminated || 0,
+          totalEmployees: data.stats.total || 0,
+          active: data.stats.active || 0,
+          inactive: data.stats.inactive || 0,
+          terminated: data.stats.terminated || 0,
+          pendingLeaves: data.stats.pendingLeaves || 0,
         });
+        setRecentLeaves(data.recentLeaves || []);
+        setRecentCheckIns(data.recentCheckIns || []);
       })
       .catch((err) => {
         console.error("Failed to load dashboard stats", err);
-        setStats({ totalEmployees: 0, active: 0, inactive: 0, terminated: 0 });
-      });
+        setStats({ totalEmployees: 0, active: 0, inactive: 0, terminated: 0, pendingLeaves: 0 });
+        setRecentLeaves([]);
+        setRecentCheckIns([]);
+      })
+      .finally(() => setLoading(false));
   }, []);
-
 
   const cards = [
     { title: "Total Employees", value: stats.totalEmployees, icon: <FaUsers />, color: "#3b82f6" },
     { title: "Active Employees", value: stats.active, icon: <FaUserCheck />, color: "#10b981" },
     { title: "Inactive Employees", value: stats.inactive, icon: <FaCalendarAlt />, color: "#f59e0b" },
     { title: "Terminated Employees", value: stats.terminated, icon: <FaTasks />, color: "#ef4444" },
+    { title: "Pending Leaves", value: stats.pendingLeaves, icon: <FaCalendarAlt />, color: "#f97316" },
   ];
 
   return (
@@ -54,24 +64,44 @@ function Dashboard() {
       {/* Recent Activity Section */}
       <div style={recentSection}>
         <h2 style={sectionTitle}>Recent Activity</h2>
-        <div style={activityGrid}>
-          <div style={activityCard}>
-            <h4 style={activityCardTitle}>Recent Leave Requests</h4>
-            <ul style={activityList}>
-              <li style={activityItem}>John Doe - Sick Leave <span style={pendingBadge}>Pending</span></li>
-              <li style={activityItem}>Jane Smith - Vacation <span style={approvedBadge}>Approved</span></li>
-              <li style={activityItem}>Mike Johnson - Personal <span style={pendingBadge}>Pending</span></li>
-            </ul>
+        {loading ? (
+          <p>Loading recent activity...</p>
+        ) : (
+          <div style={activityGrid}>
+            <div style={activityCard}>
+              <h4 style={activityCardTitle}>Recent Leave Requests</h4>
+              <ul style={activityList}>
+                {recentLeaves.length > 0 ? (
+                  recentLeaves.map((leave) => (
+                    <li key={leave.id} style={activityItem}>
+                      <span>{leave.employeeName} - {leave.type}</span>
+                      <span style={leave.status === 'approved' ? approvedBadge : leave.status === 'rejected' ? rejectedBadge : pendingBadge}>
+                        {leave.status}
+                      </span>
+                    </li>
+                  ))
+                ) : (
+                  <li style={activityItem}>No recent leave activity</li>
+                )}
+              </ul>
+            </div>
+            <div style={activityCard}>
+              <h4 style={activityCardTitle}>Recent Check-ins</h4>
+              <ul style={activityList}>
+                {recentCheckIns.length > 0 ? (
+                  recentCheckIns.map((record) => (
+                    <li key={record.id} style={activityItem}>
+                      <span>{record.employeeName}</span>
+                      <span>{new Date(record.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </li>
+                  ))
+                ) : (
+                  <li style={activityItem}>No recent check-ins</li>
+                )}
+              </ul>
+            </div>
           </div>
-          <div style={activityCard}>
-            <h4 style={activityCardTitle}>Recent Check-ins</h4>
-            <ul style={activityList}>
-              <li style={activityItem}>Sarah Wilson - 09:00 AM</li>
-              <li style={activityItem}>Tom Brown - 09:15 AM</li>
-              <li style={activityItem}>Emily Davis - 09:30 AM</li>
-            </ul>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -184,6 +214,14 @@ const pendingBadge = {
 const approvedBadge = {
   background: "#d1fae5",
   color: "#065f46",
+  padding: "2px 8px",
+  borderRadius: "4px",
+  fontSize: "12px",
+};
+
+const rejectedBadge = {
+  background: "#fee2e2",
+  color: "#991b1b",
   padding: "2px 8px",
   borderRadius: "4px",
   fontSize: "12px",

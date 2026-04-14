@@ -15,6 +15,55 @@ exports.employeeStats = async (req, res, next) => {
   }
 };
 
+exports.dashboardOverview = async (req, res, next) => {
+  try {
+    const total = await Employee.countDocuments();
+    const active = await Employee.countDocuments({ status: 'active' });
+    const inactive = await Employee.countDocuments({ status: 'inactive' });
+    const terminated = await Employee.countDocuments({ status: 'terminated' });
+    const pendingLeaves = await Leave.countDocuments({ status: 'pending' });
+
+    const recentLeaves = await Leave.find()
+      .sort({ appliedAt: -1 })
+      .limit(3)
+      .populate({
+        path: 'employee',
+        select: 'user',
+        populate: { path: 'user', select: 'name' }
+      });
+
+    const recentCheckIns = await Attendance.find({ checkIn: { $exists: true } })
+      .sort({ date: -1, checkIn: -1 })
+      .limit(3)
+      .populate({
+        path: 'employee',
+        select: 'user',
+        populate: { path: 'user', select: 'name' }
+      });
+
+    const formattedRecentLeaves = recentLeaves.map((leave) => ({
+      id: leave._id,
+      employeeName: leave.employee?.user?.name || leave.employeeName || 'Unknown',
+      type: leave.type,
+      status: leave.status,
+    }));
+
+    const formattedRecentCheckIns = recentCheckIns.map((record) => ({
+      id: record._id,
+      employeeName: record.employee?.user?.name || 'Unknown',
+      checkIn: record.checkIn,
+    }));
+
+    res.json({
+      stats: { total, active, inactive, terminated, pendingLeaves },
+      recentLeaves: formattedRecentLeaves,
+      recentCheckIns: formattedRecentCheckIns,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.leaveReport = async (req, res, next) => {
   try {
     const leaves = await Leave.find().populate('employee');

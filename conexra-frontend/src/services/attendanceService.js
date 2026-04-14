@@ -1,7 +1,8 @@
 import api from '../api';
 
-export const getAttendance = async () => {
-  const response = await api.get('/attendance');
+export const getAttendance = async (date) => {
+  const url = date ? `/attendance?date=${date}` : '/attendance';
+  const response = await api.get(url);
   console.log('Attendance data:', response.data);
   return response.data;
 };

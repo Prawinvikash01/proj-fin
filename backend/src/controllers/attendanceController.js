@@ -1,43 +1,79 @@
 const Attendance = require('../models/Attendance');
 const Employee = require('../models/Employee');
 
-const HOURS_FOR_PRESENT = 8; // 8 hours required to mark as present
-const LATE_THRESHOLD = 30; // 30 minutes after 9 AM
+const IST_OFFSET_MINUTES = 330; // IST is UTC+5:30
+const FULL_DAY_HOURS = 8;
+const HALF_DAY_HOURS = 4;
+
+const toIstDate = (date = new Date()) => {
+  const utcTime = date.getTime() + date.getTimezoneOffset() * 60000;
+  return new Date(utcTime + IST_OFFSET_MINUTES * 60000);
+};
+
+const getIstDayRange = (date = new Date()) => {
+  const ist = toIstDate(date);
+  const year = ist.getUTCFullYear();
+  const month = ist.getUTCMonth();
+  const day = ist.getUTCDate();
+
+  const start = new Date(Date.UTC(year, month, day, 0, 0, 0));
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  return { start, end };
+};
+
+const parseIstDateString = (dateString) => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+};
+
+const createAttendanceStatus = (checkInTime) => {
+  const istCheckIn = toIstDate(checkInTime);
+  const hours = istCheckIn.getUTCHours();
+  const minutes = istCheckIn.getUTCMinutes();
+
+  if (hours < 9 || (hours === 9 && minutes <= 15)) {
+    return 'present';
+  }
+  return 'late';
+};
+
+const determineCheckoutStatus = (attendance, checkOutTime) => {
+  const hoursWorked = (checkOutTime - attendance.checkIn) / (1000 * 60 * 60);
+  const wasLate = attendance.status === 'late';
+
+  if (hoursWorked >= FULL_DAY_HOURS) {
+    return wasLate ? 'late' : 'full-day';
+  }
+  if (hoursWorked >= HALF_DAY_HOURS) {
+    return wasLate ? 'late' : 'half-day';
+  }
+  return 'absent';
+};
 
 exports.checkIn = async (req, res, next) => {
   try {
     const employee = await Employee.findOne({ user: req.user.id });
     if (!employee) return res.status(404).json({ error: 'Employee profile not found' });
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    let attendance = await Attendance.findOne({ employee: employee._id, date: today });
-    
-    // If attendance exists and not checked out yet, prevent check-in again
-    if (attendance && !attendance.checkOut) {
-      return res.status(400).json({ error: 'Already checked in today. Please check out first.' });
+
+    const now = new Date();
+    const { start } = getIstDayRange(now);
+
+    const existingAttendance = await Attendance.findOne({
+      employee: employee._id,
+      date: start
+    });
+
+    if (existingAttendance) {
+      return res.status(400).json({ error: 'Already checked in today. Multiple check-ins are not allowed.' });
     }
-    
-    // If attendance exists and already checked out, allow new attendance record for next shift
-    if (!attendance) {
-      attendance = new Attendance({ employee: employee._id, date: today, checkIn: new Date() });
-    } else {
-      // Reset for new shift
-      attendance.checkIn = new Date();
-      attendance.checkOut = null;
-      attendance.status = 'present';
-    }
-    
-    // Check if late (after 9:30 AM)
-    const checkInTime = new Date();
-    const checkInHour = checkInTime.getHours();
-    const checkInMinutes = checkInTime.getMinutes();
-    
-    if (checkInHour >= 9 && checkInMinutes > LATE_THRESHOLD) {
-      attendance.status = 'late';
-    }
-    
+
+    const attendance = new Attendance({
+      employee: employee._id,
+      date: start,
+      checkIn: now,
+      status: createAttendanceStatus(now)
+    });
+
     await attendance.save();
     res.status(201).json({ message: 'Checked in', attendance });
   } catch (err) {
@@ -49,28 +85,29 @@ exports.checkOut = async (req, res, next) => {
   try {
     const employee = await Employee.findOne({ user: req.user.id });
     if (!employee) return res.status(404).json({ error: 'Employee profile not found' });
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    let attendance = await Attendance.findOne({ employee: employee._id, date: today });
-    if (!attendance) return res.status(400).json({ error: 'Not checked in yet' });
-    if (attendance.checkOut) return res.status(400).json({ error: 'Already checked out today' });
-    
-    attendance.checkOut = new Date();
-    
-    // Calculate hours worked
-    const hours = (attendance.checkOut - attendance.checkIn) / (1000 * 60 * 60);
-    
-    // Mark as present only if 8+ hours worked
-    if (hours >= HOURS_FOR_PRESENT) {
-      attendance.status = attendance.status === 'late' ? 'late' : 'present';
-    } else {
-      attendance.status = 'absent'; // Less than 8 hours = not present
+
+    const now = new Date();
+    const { start } = getIstDayRange(now);
+
+    const attendance = await Attendance.findOne({
+      employee: employee._id,
+      date: start
+    });
+
+    if (!attendance || !attendance.checkIn) {
+      return res.status(400).json({ error: 'Cannot check out without a valid check-in.' });
     }
-    
+    if (attendance.checkOut) {
+      return res.status(400).json({ error: 'Already checked out today.' });
+    }
+
+    attendance.checkOut = now;
+    attendance.status = determineCheckoutStatus(attendance, now);
+
+    const hoursWorked = (attendance.checkOut - attendance.checkIn) / (1000 * 60 * 60);
+
     await attendance.save();
-    res.json({ message: 'Checked out', attendance, hoursWorked: hours.toFixed(2) });
+    res.json({ message: 'Checked out', attendance, hoursWorked: Number(hoursWorked.toFixed(2)) });
   } catch (err) {
     next(err);
   }
@@ -80,34 +117,36 @@ exports.getTodayStatus = async (req, res, next) => {
   try {
     const employee = await Employee.findOne({ user: req.user.id });
     if (!employee) return res.status(404).json({ error: 'Employee profile not found' });
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const attendance = await Attendance.findOne({ employee: employee._id, date: today });
-    
+
+    const { start } = getIstDayRange(new Date());
+    const attendance = await Attendance.findOne({ employee: employee._id, date: start });
+
     const status = {
       isCheckedIn: false,
       isCheckedOut: false,
       status: 'checked-out',
+      attendanceStatus: 'absent',
       checkInTime: null,
       checkOutTime: null,
       hoursWorked: 0
     };
-    
+
     if (attendance) {
-      if (attendance.checkIn) status.isCheckedIn = true;
+      status.attendanceStatus = attendance.status;
+      if (attendance.checkIn) {
+        status.isCheckedIn = true;
+      }
       if (attendance.checkOut) {
         status.isCheckedOut = true;
         status.status = 'checked-out';
-        status.hoursWorked = ((attendance.checkOut - attendance.checkIn) / (1000 * 60 * 60)).toFixed(2);
-      } else {
+        status.hoursWorked = Number(((attendance.checkOut - attendance.checkIn) / (1000 * 60 * 60)).toFixed(2));
+      } else if (attendance.checkIn) {
         status.status = 'checked-in';
       }
       status.checkInTime = attendance.checkIn;
       status.checkOutTime = attendance.checkOut;
     }
-    
+
     res.json(status);
   } catch (err) {
     next(err);
@@ -119,14 +158,13 @@ exports.getDashboardStats = async (req, res, next) => {
     const employee = await Employee.findOne({ user: req.user.id });
     if (!employee) return res.status(404).json({ error: 'Employee profile not found' });
     
-    // Get last 30 days attendance
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    thirtyDaysAgo.setHours(0, 0, 0, 0);
-    
+    // Get last 30 days attendance using IST-aligned dates
+    const todayIst = getIstDayRange(new Date()).end;
+    const thirtyDaysAgo = new Date(todayIst.getTime() - 30 * 24 * 60 * 60 * 1000);
+
     const records = await Attendance.find({
       employee: employee._id,
-      date: { $gte: thirtyDaysAgo }
+      date: { $gte: thirtyDaysAgo, $lt: todayIst }
     });
     
     const present = records.filter(r => r.status === 'present').length;
@@ -155,13 +193,10 @@ exports.getAttendance = async (req, res, next) => {
       query.employee = employee._id;
     }
 
-    // Date filter
+    // Date filter (IST-based date selection)
     if (req.query.date) {
-      const selectedDate = new Date(req.query.date);
-      selectedDate.setHours(0, 0, 0, 0);
-
-      const nextDay = new Date(selectedDate);
-      nextDay.setDate(nextDay.getDate() + 1);
+      const selectedDate = parseIstDateString(req.query.date);
+      const nextDay = new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000);
 
       query.date = {
         $gte: selectedDate,

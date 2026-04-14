@@ -18,6 +18,9 @@ function Attendance() {
     present: 0,
     absent: 0,
     late: 0,
+    halfDay: 0,
+    fullDay: 0,
+    incomplete: 0,
     onLeave: 0
   });
   const [departmentFilter, setDepartmentFilter] = useState("all");
@@ -39,7 +42,7 @@ function Attendance() {
     setLoading(true);
     setError(null);
 
-    getAttendance()
+    getAttendance(selectedDate)
       .then((data) => {
         // Map backend fields to UI fields if needed
         const mapped = data.map((item) => ({
@@ -75,12 +78,15 @@ function Attendance() {
 
     setFilteredAttendance(filtered);
     console.log("Filtered Attendance:", filtered); // Debug log
-    const present = filtered.filter(a => a.status === "present").length;
+    const present = filtered.filter(a => a.status === "present" || a.status === "full-day").length;
     const absent = filtered.filter(a => a.status === "absent").length;
-    const late = filtered.filter(a => a.late).length;
+    const late = filtered.filter(a => a.status === "late").length;
+    const halfDay = filtered.filter(a => a.status === "half-day").length;
+    const fullDay = filtered.filter(a => a.status === "full-day").length;
+    const incomplete = filtered.filter(a => a.status === "incomplete").length;
     const onLeave = filtered.filter(a => a.status === "onLeave").length;
 
-    setStats({ present, absent, late, onLeave });
+    setStats({ present, absent, late, halfDay, fullDay, incomplete, onLeave });
   }, [attendance, departmentFilter, statusFilter]);
 
   const handleEdit = (record) => {
@@ -224,6 +230,9 @@ const localDate = today.toLocaleDateString('en-CA'); // YYYY-MM-DD format
               <option value="present" style={optionStyle}>Present</option>
               <option value="absent" style={optionStyle}>Absent</option>
               <option value="late" style={optionStyle}>Late</option>
+              <option value="half-day" style={optionStyle}>Half Day</option>
+              <option value="full-day" style={optionStyle}>Full Day</option>
+              <option value="incomplete" style={optionStyle}>Incomplete</option>
             </select>
             <FaChevronDown style={selectIcon} />
           </div>
@@ -320,6 +329,9 @@ const localDate = today.toLocaleDateString('en-CA'); // YYYY-MM-DD format
                         <option value="present" style={editOptionStyle}>Present</option>
                         <option value="absent" style={editOptionStyle}>Absent</option>
                         <option value="late" style={editOptionStyle}>Late</option>
+                        <option value="half-day" style={editOptionStyle}>Half Day</option>
+                        <option value="full-day" style={editOptionStyle}>Full Day</option>
+                        <option value="incomplete" style={editOptionStyle}>Incomplete</option>
                       </select>
                       <FaChevronDown style={editSelectIcon} />
                     </div>
@@ -382,6 +394,7 @@ const pageContainer = {
   width: "100%",
   maxWidth: "1400px",
   margin: "0 auto",
+  color: "#0f172a",
 };
 
 const headerStyle = {
@@ -672,6 +685,7 @@ const actionGroup = {
 const actionButton = {
   background: "none",
   border: "none",
+  color: "#0f172a",
   cursor: "pointer",
   fontSize: "16px",
   padding: "8px",
