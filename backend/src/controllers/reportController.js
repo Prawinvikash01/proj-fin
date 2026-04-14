@@ -66,7 +66,10 @@ exports.dashboardOverview = async (req, res, next) => {
 
 exports.leaveReport = async (req, res, next) => {
   try {
-    const leaves = await Leave.find().populate('employee');
+    const leaves = await Leave.find().populate({
+      path: 'employee',
+      populate: { path: 'user', select: 'name' }
+    });
     res.json(leaves);
   } catch (err) {
     next(err);
@@ -75,7 +78,10 @@ exports.leaveReport = async (req, res, next) => {
 
 exports.attendanceReport = async (req, res, next) => {
   try {
-    const records = await Attendance.find().populate('employee');
+    const records = await Attendance.find().populate({
+      path: 'employee',
+      populate: { path: 'user', select: 'name' }
+    });
     res.json(records);
   } catch (err) {
     next(err);
@@ -84,7 +90,10 @@ exports.attendanceReport = async (req, res, next) => {
 
 exports.payrollReport = async (req, res, next) => {
   try {
-    const payrolls = await Payroll.find().populate('employee');
+    const payrolls = await Payroll.find().populate({
+      path: 'employee',
+      populate: { path: 'user', select: 'name' }
+    });
     res.json(payrolls);
   } catch (err) {
     next(err);

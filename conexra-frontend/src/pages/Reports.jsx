@@ -11,17 +11,32 @@ function Reports() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-    Promise.all([getEmployeeStats(), getLeaveReport(), getAttendanceReport(), getPayrollReport()])
-      .then(([stats, leaves, attendance, payrolls]) => {
+    const fetchReports = async (showLoading = false) => {
+      if (showLoading) {
+        setLoading(true);
+      }
+      setError(null);
+      try {
+        const [stats, leaves, attendance, payrolls] = await Promise.all([
+          getEmployeeStats(),
+          getLeaveReport(),
+          getAttendanceReport(),
+          getPayrollReport()
+        ]);
         setEmployeeStats(stats);
         setLeaveReport(leaves);
         setAttendanceReport(attendance);
         setPayrollReport(payrolls);
-      })
-      .catch((err) => setError(err?.response?.data?.error || err.message))
-      .finally(() => setLoading(false));
+      } catch (err) {
+        setError(err?.response?.data?.error || err.message);
+      } finally {
+        if (showLoading) setLoading(false);
+      }
+    };
+
+    fetchReports(true);
+    const interval = setInterval(() => fetchReports(), 15000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) return <div style={{ padding: '24px' }}>Loading reports...</div>;
@@ -41,7 +56,7 @@ function Reports() {
       )}
 
       <div style={block}>
-        <h2><FaCalendarAlt /> Leave Report</h2>
+        <h2 style={sectionTitle}><FaCalendarAlt /> Leave Report</h2>
         <div>Total leave requests: {leaveReport.length}</div>
         {leaveReport.length > 0 && (
           <div style={reportTableContainer}>
@@ -58,7 +73,7 @@ function Reports() {
               <tbody>
                 {leaveReport.slice(0, 5).map((item) => (
                   <tr key={item._id || item.id}>
-                    <td style={reportTd}>{item.employee?.user?.name || 'Unknown'}</td>
+                    <td style={reportTd}>{item.employee?.user?.name || item.employeeName || 'Unknown'}</td>
                     <td style={reportTd}>{item.type || 'N/A'}</td>
                     <td style={reportTd}>{item.status || 'N/A'}</td>
                     <td style={reportTd}>{new Date(item.startDate).toLocaleDateString()}</td>
@@ -89,7 +104,7 @@ function Reports() {
               <tbody>
                 {attendanceReport.slice(0, 5).map((item) => (
                   <tr key={item._id || item.id}>
-                    <td style={reportTd}>{item.employee?.user?.name || 'Unknown'}</td>
+                    <td style={reportTd}>{item.employee?.user?.name || item.employeeName || 'Unknown'}</td>
                     <td style={reportTd}>{new Date(item.date).toLocaleDateString()}</td>
                     <td style={reportTd}>{item.status || 'N/A'}</td>
                     <td style={reportTd}>{item.checkIn ? new Date(item.checkIn).toLocaleTimeString() : 'N/A'}</td>
@@ -103,7 +118,7 @@ function Reports() {
       </div>
 
       <div style={block}>
-        <h2><FaChartLine /> Payroll Report</h2>
+        <h2 style={sectionTitle}><FaChartLine /> Payroll Report</h2>
         <div>Total payroll entries: {payrollReport.length}</div>
         {payrollReport.length > 0 && (
           <div style={reportTableContainer}>
@@ -136,15 +151,16 @@ function Reports() {
   );
 }
 
-const container = { width: '100%', maxWidth: '1400px', margin: '0 auto' };
-const pageTitle = { fontSize: '28px', color: '#0f172a', marginBottom: '20px' };
-const cardsRow = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' };
-const card = { background: 'white', borderRadius: '10px', padding: '18px', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.08)' };
-const block = { background: 'white', borderRadius: '10px', padding: '18px', marginBottom: '14px', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.08)' };
+const container = { width: '100%', maxWidth: '1400px', margin: '0 auto', color: '#000' };
+const pageTitle = { fontSize: '28px', color: '#000', marginBottom: '20px' };
+const cardsRow = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px', color: '#000' };
+const card = { background: 'white', borderRadius: '10px', padding: '18px', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.08)', color: '#000' };
+const block = { background: 'white', borderRadius: '10px', padding: '18px', marginBottom: '14px', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.08)', color: '#000' };
 const reportTableContainer = { overflowX: 'auto', marginTop: '12px' };
-const reportTable = { width: '100%', borderCollapse: 'collapse', minWidth: '720px' };
-const reportTh = { textAlign: 'left', padding: '10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' };
-const reportTd = { padding: '10px', borderBottom: '1px solid #e2e8f0' };
+const reportTable = { width: '100%', borderCollapse: 'collapse', minWidth: '720px', color: '#000' };
+const reportTh = { textAlign: 'left', padding: '10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#000' };
+const reportTd = { padding: '10px', borderBottom: '1px solid #e2e8f0', color: '#000' };
+const sectionTitle = { color: '#000', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' };
 const errorText = { color: '#b91c1c', marginBottom: '12px' };
 
 export default Reports;
