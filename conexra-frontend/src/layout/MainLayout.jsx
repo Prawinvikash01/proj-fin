@@ -29,7 +29,7 @@ function MainLayout() {
     { path: "/documents", name: "Documents", icon: <FaFolderOpen /> },
     { path: "/notifications", name: "Notifications", icon: <FaBell /> },
     { path: "/reports", name: "Reports", icon: <FaChartLine /> },
-    { path: "/settings", name: "Settings", icon: <FaCog /> },
+    // { path: "/settings", name: "Settings", icon: <FaCog /> },
   ];
 
   return (
@@ -192,21 +192,21 @@ const styles = {
     display: "flex",
     alignItems: "center",
   },
-  logoutButton: {
-    margin: "20px",
-    padding: "12px 16px",
-    background: "#ef4444",
-    color: "white",
-    border: "none",
-    borderRadius: "8px",
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "500",
-    transition: "opacity 0.2s",
-  },
+ logoutButton: {
+  margin: "20px",
+  marginTop: "-20px",   // 🔥 THIS IS THE MAGIC LINE
+  padding: "12px 16px",
+  background: "#ef4444",
+  color: "white",
+  borderRadius: "8px",
+  display: "flex",
+  alignItems: "center",
+  gap: "12px",
+  cursor: "pointer",
+  fontSize: "14px",
+  fontWeight: "500",
+  transition: "opacity 0.2s",
+},
   logoutIcon: {
     fontSize: "18px",
   },
