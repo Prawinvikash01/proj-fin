@@ -484,12 +484,12 @@ function EmployeeDashboard() {
           <h1 style={styles.welcomeTitle}>Welcome back, {user.name}! 👋</h1>
           <p style={styles.welcomeSubtitle}>{formatDate(currentTime)}</p>
         </div>
-        <div style={styles.headerRight}>
+        {/* <div style={styles.headerRight}>
           <div style={styles.notificationBadge}>
             <FaBell style={styles.notificationIcon} />
             <span style={styles.notificationCount}>3</span>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Quick Stats Grid */}
