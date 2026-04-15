@@ -35,7 +35,13 @@ exports.getDocuments = async (req, res, next) => {
     if (req.user.role === 'employee') {
       const employee = await Employee.findOne({ user: req.user.id });
       if (!employee) return res.status(404).json({ error: 'Employee profile not found' });
-      query.employee = employee._id;
+      query = {
+        $or: [
+          { employee: employee._id },
+          { employee: { $exists: false } },
+          { employee: null },
+        ],
+      };
     }
     const docs = await Document.find(query)
       .populate({ path: 'employee', populate: { path: 'user', select: 'name email' } })

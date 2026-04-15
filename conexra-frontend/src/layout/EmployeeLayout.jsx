@@ -5,6 +5,7 @@ import {
   FaCalendarAlt, 
   FaTasks, 
   FaUser,
+  FaFolderOpen,
   FaSignOutAlt,
   FaBell
 } from "react-icons/fa";
@@ -32,6 +33,7 @@ function EmployeeLayout() {
     { path: "/employee/attendance", name: "My Attendance", icon: <FaClock /> },
     { path: "/employee/leave", name: "My Leave", icon: <FaCalendarAlt /> },
     { path: "/employee/tasks", name: "My Tasks", icon: <FaTasks /> },
+    { path: "/employee/documents", name: "Documents", icon: <FaFolderOpen /> },
     { path: "/employee/profile", name: "My Profile", icon: <FaUser /> },
   ];
 

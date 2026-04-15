@@ -22,6 +22,7 @@ import MyAttendance from "./pages/employee/Attendance";
 import MyLeave from "./pages/employee/Leave";
 import MyTasks from "./pages/employee/Tasks";
 import MyProfile from "./pages/employee/Profile";
+import EmployeeDocuments from "./pages/employee/Documents";
 
 import Login from "./pages/Login";
 
@@ -162,6 +163,14 @@ function App() {
             element={
               <ProtectedRoute allowedRole="employee">
                 <MyTasks />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/employee/documents" 
+            element={
+              <ProtectedRoute allowedRole="employee">
+                <EmployeeDocuments />
               </ProtectedRoute>
             } 
           />
