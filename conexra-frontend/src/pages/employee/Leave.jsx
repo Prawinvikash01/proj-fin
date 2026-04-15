@@ -562,6 +562,7 @@ const styles = {
     borderRadius: "8px",
     fontSize: "16px",
     background: "white",
+    color:"black",
     cursor: "pointer",
     appearance: "none",
     transition: "border-color 0.2s ease",
@@ -628,6 +629,7 @@ const styles = {
     fontSize: "14px",
     background: "white",
     cursor: "pointer",
+    color:"black",
   },
   requestList: {
     display: "grid",

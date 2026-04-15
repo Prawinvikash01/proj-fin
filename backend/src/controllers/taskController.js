@@ -1,6 +1,7 @@
 const Task = require('../models/Task');
 const Employee = require('../models/Employee');
 const User = require('../models/User');
+const { createNotification } = require('./notificationController');
 
 // Get all tasks for admin/hr (view all)
 exports.getAllTasksAdmin = async (req, res, next) => {
@@ -146,6 +147,14 @@ exports.createTask = async (req, res, next) => {
     });
 
     await task.save();
+    if (employee.user) {
+      await createNotification(
+        employee.user,
+        `A new task has been assigned: ${title}`,
+        'general'
+      );
+    }
+
     await task.populate([
       { path: 'employee', populate: { path: 'user', select: 'name email' } },
       { path: 'assignedBy', select: 'name email' }

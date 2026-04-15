@@ -1,5 +1,6 @@
 const Payroll = require('../models/Payroll');
 const Employee = require('../models/Employee');
+const { createNotification } = require('./notificationController');
 
 exports.createPayroll = async (req, res, next) => {
   try {
@@ -7,7 +8,7 @@ exports.createPayroll = async (req, res, next) => {
     if (!employeeId || !salary || !month) {
       return res.status(400).json({ error: 'employeeId, salary, and month are required' });
     }
-    const employee = await Employee.findById(employeeId);
+    const employee = await Employee.findById(employeeId).populate('user', 'name email');
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
 
     const payroll = new Payroll({
@@ -23,6 +24,15 @@ exports.createPayroll = async (req, res, next) => {
       path: 'employee',
       populate: { path: 'user', select: 'name email' }
     });
+
+    if (employee.user) {
+      await createNotification(
+        employee.user,
+        `Salary credited for ${month}.`,
+        'payroll'
+      );
+    }
+
     res.status(201).json({ message: 'Payroll created', payroll: populatedPayroll });
   } catch (err) {
     next(err);

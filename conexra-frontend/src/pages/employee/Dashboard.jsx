@@ -325,11 +325,14 @@ function EmployeeDashboard() {
       background: "white",
       padding: "25px",
       borderRadius: "12px",
+      color:"black",
+
       boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
     },
     quickActionsGrid: {
       display: "grid",
       gridTemplateColumns: "repeat(2, 1fr)",
+      color:"black",
       gap: "10px",
     },
     quickActionButton: {
@@ -589,7 +592,7 @@ function EmployeeDashboard() {
                 onClick={() => navigate("/employee/attendance")}
               >
                 <FaClock style={styles.quickActionIcon} />
-                <span>View Attendance</span>
+                <span style={{color:"black"}}>View Attendance</span>
                 <FaArrowRight style={styles.quickActionArrow} />
               </button>
               <button 
@@ -597,7 +600,7 @@ function EmployeeDashboard() {
                 onClick={() => navigate("/employee/leave")}
               >
                 <FaCalendarAlt style={styles.quickActionIcon} />
-                <span>Request Leave</span>
+              <span style={{color:"black"}}>Request Leave</span>
                 <FaArrowRight style={styles.quickActionArrow} />
               </button>
               <button 
@@ -605,7 +608,7 @@ function EmployeeDashboard() {
                 onClick={() => navigate("/employee/tasks")}
               >
                 <FaTasks style={styles.quickActionIcon} />
-                <span>My Tasks</span>
+              <span style={{color:"black"}}>My Tasks</span>
                 <FaArrowRight style={styles.quickActionArrow} />
               </button>
               <button 
@@ -613,7 +616,7 @@ function EmployeeDashboard() {
                 onClick={() => navigate("/employee/profile")}
               >
                 <FaUser style={styles.quickActionIcon} />
-                <span>My Profile</span>
+                <span style={{color:"black"}}>My Profile</span>
                 <FaArrowRight style={styles.quickActionArrow} />
               </button>
             </div>

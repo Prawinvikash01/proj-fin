@@ -1,17 +1,19 @@
 const mongoose = require('mongoose');
 const Document = require('../models/Document');
 const Employee = require('../models/Employee');
+const { createNotification } = require('./notificationController');
 
 exports.uploadDocument = async (req, res, next) => {
   try {
     const { employeeId, name, url, category } = req.body;
     const documentData = { name, url, category, uploadedBy: req.user.id };
 
+    let employee = null;
     if (employeeId) {
       if (!mongoose.isValidObjectId(employeeId)) {
         return res.status(400).json({ error: 'Invalid employee selected' });
       }
-      const employee = await Employee.findById(employeeId);
+      employee = await Employee.findById(employeeId).populate('user', 'name email');
       if (!employee) return res.status(404).json({ error: 'Employee not found' });
       documentData.employee = employeeId;
     }
@@ -22,6 +24,14 @@ exports.uploadDocument = async (req, res, next) => {
     const populatedDocument = await Document.findById(document._id)
       .populate({ path: 'employee', populate: { path: 'user', select: 'name email' } })
       .populate('uploadedBy', 'name email');
+
+    if (employee?.user) {
+      await createNotification(
+        employee.user,
+        `A new document (${name}) has been uploaded for you.`,
+        'general'
+      );
+    }
 
     res.status(201).json({ message: 'Document uploaded', document: populatedDocument });
   } catch (err) {

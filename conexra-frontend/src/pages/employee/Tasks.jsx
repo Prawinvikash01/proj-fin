@@ -448,6 +448,7 @@ const styles = {
     appearance: "none",
     cursor: "pointer",
     minWidth: "140px",
+      color:"black",
   },
   searchGroup: {
     position: "relative",

@@ -1,6 +1,7 @@
 const Leave = require('../models/Leave');
 const Employee = require('../models/Employee');
 const User = require('../models/User');
+const { createNotification } = require('./notificationController');
 
 exports.applyLeave = async (req, res, next) => {
   try {
@@ -48,12 +49,21 @@ exports.getLeaves = async (req, res, next) => {
 exports.updateLeaveStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
-    const leave = await Leave.findById(req.params.id);
+    const leave = await Leave.findById(req.params.id).populate({ path: 'employee', populate: { path: 'user', select: 'name email' } });
     if (!leave) return res.status(404).json({ error: 'Leave not found' });
     leave.status = status;
     leave.reviewedBy = req.user.id;
     leave.reviewedAt = new Date();
     await leave.save();
+
+    if (leave.employee?.user) {
+      await createNotification(
+        leave.employee.user,
+        `Your leave request has been ${status}.`,
+        'leave'
+      );
+    }
+
     res.json({ message: 'Leave status updated', leave });
   } catch (err) {
     next(err);

@@ -10,11 +10,14 @@ import {
   FaBell
 } from "react-icons/fa";
 import { useState, useEffect } from "react";
+import { getNotifications } from '../services/notificationService';
 
 function EmployeeLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -23,10 +26,31 @@ function EmployeeLayout() {
     }
   }, []);
 
+  useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        const data = await getNotifications();
+        setNotifications(data);
+      } catch (err) {
+        console.error('Failed to load notifications', err);
+      }
+    };
+
+    loadNotifications();
+    const intervalId = setInterval(loadNotifications, 10000);
+    return () => clearInterval(intervalId);
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/");
   };
+
+  const toggleNotifications = () => {
+    setNotificationOpen((open) => !open);
+  };
+
+  const unreadCount = notifications.filter((item) => !item.read).length;
 
   const menuItems = [
     { path: "/employee/dashboard", name: "Dashboard", icon: <FaHome /> },
@@ -91,10 +115,30 @@ function EmployeeLayout() {
             {menuItems.find(item => item.path === location.pathname)?.name || "Dashboard"}
           </div>
           <div style={styles.headerRight}>
-            <div style={styles.notificationIcon}>
-              <FaBell />
-              <span style={styles.notificationBadge}>2</span>
-            </div>
+            <button style={styles.notificationButton} title="View notifications" onClick={toggleNotifications}>
+              <div style={styles.notificationIcon}>
+                <FaBell />
+                {unreadCount > 0 && <span style={styles.notificationBadge}>{unreadCount}</span>}
+              </div>
+              <div style={styles.notificationText}>
+                <div style={styles.notificationLabel}>Notifications</div>
+                <div style={styles.notificationStatus}>{unreadCount > 0 ? `${unreadCount} unread` : 'No new notifications'}</div>
+              </div>
+            </button>
+            {notificationOpen && (
+              <div style={styles.notificationDropdown}>
+                {notifications.length === 0 ? (
+                  <div style={styles.notificationItemEmpty}>No notifications available.</div>
+                ) : (
+                  notifications.slice(0, 5).map((item) => (
+                    <div key={item._id || item.id} style={{ ...styles.notificationItem, opacity: item.read ? 0.65 : 1 }}>
+                      <div style={styles.notificationMessage}>{item.message}</div>
+                      <div style={styles.notificationMeta}>{new Date(item.createdAt || Date.now()).toLocaleString()}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </div>
         
@@ -240,24 +284,91 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "20px",
+    position: "relative",
+  },
+  notificationButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    border: "1px solid #e2e8f0",
+    background: "#f8fafc",
+    borderRadius: "999px",
+    padding: "10px 16px",
+    cursor: "pointer",
+    color: "#0f172a",
+    transition: "background 0.2s ease, transform 0.2s ease",
   },
   notificationIcon: {
     position: "relative",
-    cursor: "pointer",
-    fontSize: "20px",
-    color: "#64748b",
+    width: "34px",
+    height: "34px",
+    display: "grid",
+    placeItems: "center",
+    borderRadius: "50%",
+    background: "#e2e8f0",
+    color: "#2563eb",
+    fontSize: "16px",
   },
   notificationBadge: {
     position: "absolute",
-    top: "-5px",
-    right: "-5px",
+    top: "-6px",
+    right: "-6px",
     background: "#ef4444",
     color: "white",
     fontSize: "10px",
-    padding: "2px 5px",
-    borderRadius: "10px",
-    minWidth: "16px",
-    textAlign: "center",
+    padding: "3px 6px",
+    borderRadius: "12px",
+    minWidth: "18px",
+    display: "inline-flex",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  notificationText: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    lineHeight: 1.2,
+  },
+  notificationLabel: {
+    fontSize: "14px",
+    fontWeight: 600,
+    color: "#0f172a",
+  },
+  notificationStatus: {
+    fontSize: "12px",
+    color: "#475569",
+  },
+  notificationDropdown: {
+    position: "absolute",
+    top: "60px",
+    right: "0",
+    minWidth: "280px",
+    maxWidth: "320px",
+    background: "white",
+    border: "1px solid #e2e8f0",
+    boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+    borderRadius: "12px",
+    padding: "14px 16px",
+    color: "#334155",
+    fontSize: "14px",
+    zIndex: 20,
+  },
+  notificationItem: {
+    padding: "10px 0",
+    borderBottom: "1px solid #e2e8f0",
+  },
+  notificationItemEmpty: {
+    padding: "12px 0",
+    color: "#64748b",
+  },
+  notificationMessage: {
+    fontSize: "14px",
+    lineHeight: 1.4,
+    marginBottom: "6px",
+  },
+  notificationMeta: {
+    fontSize: "12px",
+    color: "#64748b",
   },
   contentWrapper: {
     padding: "30px",
