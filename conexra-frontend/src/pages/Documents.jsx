@@ -174,7 +174,8 @@ const headerStyle = { display: 'flex', justifyContent: 'space-between', alignIte
 const pageTitle = { fontSize: '28px', color: '#000', margin: 0 };
 const refreshButton = { border: 'none', background: '#3b82f6', color: 'white', padding: '8px 14px', borderRadius: '8px', cursor: 'pointer' };
 const errorStyle = { marginBottom: '16px', color: '#b91c1c', fontWeight: 600 };
-const addRow = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', flexWrap: 'wrap', marginBottom: '16px', color: '#000' };
+const addRow = { 
+  display:'flex', gap: '16px', marginBottom: '16px', color: '#000' };
 const inputStyle = { padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', width: '100%', color: '#6b7280' };
 const addButton = { background: '#10b981', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer' };
 const tableContainer = { background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflowX: 'auto', color: '#000' };
