@@ -517,14 +517,14 @@ function Tasks() {
               <div style={formGroup}>
                 <label style={formLabel}>Assign To *</label>
                 <div style={selectWrapper}>
-                  <select
+                  <select 
                     value={newTask.employee}
                     onChange={(e) => setNewTask({ ...newTask, employee: e.target.value })}
                     style={formSelect}
                   >
-                    <option value="">Select Employee</option>
+                    <option style={{color:"black"}} value="">Select Employee</option>
                     {employees.map(emp => (
-                      <option key={emp._id || emp.id} value={emp._id || emp.id}>
+                      <option style={{color:"black"}} key={emp._id || emp.id} value={emp._id || emp.id}>
                         {emp.user?.name || emp.name} {emp.department ? `- ${emp.department}` : ''}
                       </option>
                     ))}
@@ -834,6 +834,7 @@ const filterSelect = {
   appearance: "none",
   width: "100%",
   cursor: "pointer",
+  color:"black"
 };
 
 const selectIconSmall = {
@@ -897,6 +898,7 @@ const formTitle = {
   fontSize: "20px",
   color: "#0f172a",
   margin: "0 0 20px 0",
+
 };
 
 const formGrid = {
@@ -904,11 +906,13 @@ const formGrid = {
   gridTemplateColumns: "repeat(2, 1fr)",
   gap: "15px",
   marginBottom: "20px",
+  color:"black"
 };
 
 const formGroup = {
   display: "flex",
   flexDirection: "column",
+  color:"black"
 };
 
 const fullWidthFormGroup = {
@@ -939,6 +943,7 @@ const formSelect = {
   outline: "none",
   appearance: "none",
   width: "100%",
+  color:"black",
 };
 
 const formTextarea = {
