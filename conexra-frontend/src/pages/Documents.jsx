@@ -44,12 +44,16 @@ function Documents() {
     }
 
     try {
-      const created = await uploadDocument({
-        employeeId: newDoc.employeeId,
+      const payload = {
         name: newDoc.name,
         url: newDoc.url,
         category: newDoc.category
-      });
+      };
+      if (newDoc.employeeId) {
+        payload.employeeId = newDoc.employeeId;
+      }
+
+      const created = await uploadDocument(payload);
       setDocs((p) => [created, ...p]);
       setNewDoc({ employeeId: '', name: '', url: '', category: 'Other' });
       setError(null);
@@ -165,18 +169,18 @@ function Documents() {
   );
 }
 
-const pageContainer = { width: '100%', maxWidth: '1400px', margin: '0 auto' };
-const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' };
-const pageTitle = { fontSize: '28px', color: '#0f172a', margin: 0 };
+const pageContainer = { width: '100%', maxWidth: '1400px', margin: '0 auto', color: '#000' };
+const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', color: '#000' };
+const pageTitle = { fontSize: '28px', color: '#000', margin: 0 };
 const refreshButton = { border: 'none', background: '#3b82f6', color: 'white', padding: '8px 14px', borderRadius: '8px', cursor: 'pointer' };
 const errorStyle = { marginBottom: '16px', color: '#b91c1c', fontWeight: 600 };
-const addRow = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' };
-const inputStyle = { padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', width: '100%' };
+const addRow = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', flexWrap: 'wrap', marginBottom: '16px', color: '#000' };
+const inputStyle = { padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', width: '100%', color: '#6b7280' };
 const addButton = { background: '#10b981', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer' };
-const tableContainer = { background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflowX: 'auto' };
-const table = { width: '100%', borderCollapse: 'collapse' };
-const th = { textAlign: 'left', padding: '12px', borderBottom: '2px solid #e2e8f0', background: '#f8fafc' };
-const td = { padding: '12px', borderBottom: '1px solid #e2e8f0' };
+const tableContainer = { background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflowX: 'auto', color: '#000' };
+const table = { width: '100%', borderCollapse: 'collapse', color: '#000' };
+const th = { textAlign: 'left', padding: '12px', borderBottom: '2px solid #e2e8f0', background: '#f8fafc', color: '#000' };
+const td = { padding: '12px', borderBottom: '1px solid #e2e8f0', color: '#000' };
 const actionBtn = { border: 'none', background: '#ef4444', color: 'white', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer' };
 
 export default Documents;

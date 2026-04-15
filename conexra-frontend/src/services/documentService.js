@@ -7,7 +7,7 @@ export const getDocuments = async () => {
 
 export const uploadDocument = async (payload) => {
   const response = await api.post('/documents', payload);
-  return response.data;
+  return response.data.document;
 };
 
 export const deleteDocument = async (id) => {

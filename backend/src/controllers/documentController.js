@@ -1,18 +1,29 @@
+const mongoose = require('mongoose');
 const Document = require('../models/Document');
 const Employee = require('../models/Employee');
 
 exports.uploadDocument = async (req, res, next) => {
   try {
     const { employeeId, name, url, category } = req.body;
-    const document = new Document({
-      employee: employeeId,
-      name,
-      url,
-      category,
-      uploadedBy: req.user.id
-    });
+    const documentData = { name, url, category, uploadedBy: req.user.id };
+
+    if (employeeId) {
+      if (!mongoose.isValidObjectId(employeeId)) {
+        return res.status(400).json({ error: 'Invalid employee selected' });
+      }
+      const employee = await Employee.findById(employeeId);
+      if (!employee) return res.status(404).json({ error: 'Employee not found' });
+      documentData.employee = employeeId;
+    }
+
+    const document = new Document(documentData);
     await document.save();
-    res.status(201).json({ message: 'Document uploaded', document });
+
+    const populatedDocument = await Document.findById(document._id)
+      .populate({ path: 'employee', populate: { path: 'user', select: 'name email' } })
+      .populate('uploadedBy', 'name email');
+
+    res.status(201).json({ message: 'Document uploaded', document: populatedDocument });
   } catch (err) {
     next(err);
   }
@@ -26,7 +37,9 @@ exports.getDocuments = async (req, res, next) => {
       if (!employee) return res.status(404).json({ error: 'Employee profile not found' });
       query.employee = employee._id;
     }
-    const docs = await Document.find(query).populate('employee').populate('uploadedBy', 'name email');
+    const docs = await Document.find(query)
+      .populate({ path: 'employee', populate: { path: 'user', select: 'name email' } })
+      .populate('uploadedBy', 'name email');
     res.json(docs);
   } catch (err) {
     next(err);
