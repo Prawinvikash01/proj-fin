@@ -10,7 +10,7 @@ import {
   FaBell
 } from "react-icons/fa";
 import { useState, useEffect } from "react";
-import { getNotifications } from '../services/notificationService';
+import { getNotifications, markAllAsRead } from '../services/notificationService';
 
 function EmployeeLayout() {
   const location = useLocation();
@@ -46,8 +46,18 @@ function EmployeeLayout() {
     navigate("/");
   };
 
-  const toggleNotifications = () => {
-    setNotificationOpen((open) => !open);
+  const toggleNotifications = async () => {
+    const opening = !notificationOpen;
+    setNotificationOpen(opening);
+
+    if (opening && notifications.some((item) => !item.read)) {
+      try {
+        await markAllAsRead();
+        setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+      } catch (err) {
+        console.error('Failed to mark notifications as read', err);
+      }
+    }
   };
 
   const unreadCount = notifications.filter((item) => !item.read).length;
