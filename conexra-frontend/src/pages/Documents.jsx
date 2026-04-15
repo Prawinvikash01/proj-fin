@@ -148,7 +148,7 @@ function Documents() {
                 <tr key={doc._id || doc.id}>
                   <td style={td}>{doc.name}</td>
                   <td style={td}>
-                    <a target="_blank" rel="noreferrer" href={doc.url}>{doc.url}</a>
+                    <a target="_blank" rel="noreferrer" href={doc.url}>View</a>
                   </td>
                   <td style={td}>{doc.employee?.user?.name || 'All employees'}</td>
                   <td style={td}>{doc.category || 'Other'}</td>
